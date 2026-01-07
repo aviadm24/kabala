@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Upload Result</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Upload Successful</h1>
+    <p><strong>Name:</strong> {{ name }}</p>
+    <p><strong>Date:</strong> {{ date }}</p>
+
+    <p><strong>Cloudinary Response:</strong></p>
+    <pre>{{ result_json }}</pre>
+
+    {% if result.secure_url %}
+      <p>Image preview:</p>
+      <img src="{{ result.secure_url }}" alt="uploaded image" style="max-width:100%; height:auto;"/>
+    {% endif %}
+
+    <p><a href="/ui">Upload another</a></p>
+  </body>
+</html>

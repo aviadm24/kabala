@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Upload Image</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; }
+      label { display:block; margin-top:12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Upload Image to Cloudinary</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div>Saved images: <strong id="count-val">{{ count or 0 }}</strong></div>
+      <button id="refresh-count" style="padding:6px 8px;">Refresh count</button>
+    </div>
+    {% if message %}
+      <div style="color: red;">{{ message }}</div>
+    {% endif %}
+
+    <form method="post" action="/upload" enctype="multipart/form-data">
+      <label>Name
+        <input type="text" name="name" required value="{{ name or '' }}" />
+      </label>
+
+      <label>Date
+        <input type="date" name="date" value="{{ date or '' }}" />
+      </label>
+
+      <label>Image file
+        <input type="file" name="image" accept="image/*" required />
+      </label>
+
+      <button type="submit" style="margin-top:12px;">Upload</button>
+    </form>
+
+    <hr />
+
+    <h2>Search Uploads</h2>
+    <form method="get" action="/search">
+      <label>Name (partial)
+        <input type="text" name="name" value="{{ name or '' }}" />
+      </label>
+      <label>Date
+        <input type="date" name="date" value="{{ date or '' }}" />
+      </label>
+      <button type="submit" style="margin-top:12px;">Search</button>
+    </form>
+
+    {% if results %}
+      <h3>Results ({{ results|length }})</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        {% for r in results %}
+          <div style="width:200px;border:1px solid #ddd;padding:8px;">
+            {% if r.secure_url %}
+              <img src="{{ r.secure_url }}" style="width:100%;height:auto;" />
+            {% endif %}
+            <div style="font-size:12px;margin-top:6px;">id: {{ r.public_id }}</div>
+            <div style="font-size:12px;color:#666;">created: {{ r.created_at }}</div>
+            {% if r.secure_url %}
+              <div><a href="{{ r.secure_url }}" target="_blank">Open</a></div>
+            {% endif %}
+            <form method="post" action="/delete" onsubmit="return confirm('Are you sure you want to permanently delete this image?');" style="margin-top:8px;">
+              <input type="hidden" name="public_id" value="{{ r.public_id }}" />
+              <button type="submit" style="background:#c33;color:#fff;border:none;padding:6px 8px;cursor:pointer;">Delete</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <script>
+      document.getElementById('refresh-count').addEventListener('click', async function(){
+        try{
+          const r = await fetch('/count');
+          const j = await r.json();
+          if(j.count !== undefined){
+            document.getElementById('count-val').textContent = j.count;
+          } else if(j.error){
+            alert('Count failed: ' + j.error);
+          }
+        }catch(err){
+          alert('Count request failed: ' + err);
+        }
+      });
+    </script>
+  </body>
+</html>
