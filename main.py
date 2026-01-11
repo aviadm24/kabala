@@ -25,7 +25,8 @@ def ensure_db():
     cur = conn.cursor()
     cur.execute('''
     CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
         phone TEXT,
         email TEXT,
         family_members TEXT,
@@ -36,17 +37,20 @@ def ensure_db():
     cur.execute('''
     CREATE TABLE IF NOT EXISTS receipts (
         public_id TEXT PRIMARY KEY,
+        user_id INTEGER,
+        username TEXT,
         name TEXT,
         date TEXT,
-        refunded TEXT,
         sent_to_insurance TEXT,
+        refund_details TEXT,
         insurance_company TEXT,
         account_username TEXT,
         family_count INTEGER,
         family_names TEXT,
         how_work TEXT,
         secure_url TEXT,
-        created_at TEXT
+        created_at TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(user_id)
     )
     ''')
     conn.commit()
@@ -56,9 +60,9 @@ def ensure_db():
 def insert_receipt(rec: dict):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('''INSERT OR REPLACE INTO receipts(public_id, name, date, refunded, sent_to_insurance, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
-        rec.get('public_id'), rec.get('name'), rec.get('date'), rec.get('refunded'), rec.get('sent_to_insurance'), rec.get('insurance_company'), rec.get('account_username'), rec.get('family_count'), rec.get('family_names'), rec.get('how_work'), rec.get('secure_url'), rec.get('created_at')
+    cur.execute('''INSERT OR REPLACE INTO receipts(public_id, user_id, username, name, date, sent_to_insurance, refund_details, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        rec.get('public_id'), rec.get('user_id'), rec.get('username'), rec.get('name'), rec.get('date'), rec.get('sent_to_insurance'), rec.get('refund_details'), rec.get('insurance_company'), rec.get('account_username'), rec.get('family_count'), rec.get('family_names'), rec.get('how_work'), rec.get('secure_url'), rec.get('created_at')
     ))
     conn.commit()
     conn.close()
@@ -88,12 +92,12 @@ def delete_receipt_db(public_id: str):
 def get_receipt_db(public_id: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT public_id, name, date, refunded, sent_to_insurance, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at FROM receipts WHERE public_id=?", (public_id,))
+    cur.execute("SELECT public_id, user_id, username, name, date, sent_to_insurance, refund_details, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at FROM receipts WHERE public_id=?", (public_id,))
     row = cur.fetchone()
     conn.close()
     if not row:
         return None
-    cols = ['public_id', 'name', 'date', 'refunded', 'sent_to_insurance', 'insurance_company', 'account_username', 'family_count', 'family_names', 'how_work', 'secure_url', 'created_at']
+    cols = ['public_id', 'user_id', 'username', 'name', 'date', 'sent_to_insurance', 'refund_details', 'insurance_company', 'account_username', 'family_count', 'family_names', 'how_work', 'secure_url', 'created_at']
     return dict(zip(cols, row))
 
 
@@ -110,12 +114,24 @@ def insert_user(username: str, phone: str, email: str, family_members: str, insu
 def get_user_db(username: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT username, phone, email, family_members, insurance_companies, created_at FROM users WHERE username=?", (username,))
+    cur.execute("SELECT user_id, username, phone, email, family_members, insurance_companies, created_at FROM users WHERE username=?", (username,))
     row = cur.fetchone()
     conn.close()
     if not row:
         return None
-    cols = ['username', 'phone', 'email', 'family_members', 'insurance_companies', 'created_at']
+    cols = ['user_id', 'username', 'phone', 'email', 'family_members', 'insurance_companies', 'created_at']
+    return dict(zip(cols, row))
+
+
+def get_user_by_id(user_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id, username, phone, email, family_members, insurance_companies, created_at FROM users WHERE user_id=?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    cols = ['user_id', 'username', 'phone', 'email', 'family_members', 'insurance_companies', 'created_at']
     return dict(zip(cols, row))
 
 
@@ -175,14 +191,27 @@ def health_check():
 
 @app.get('/')
 def ui(request: Request):
-    # get current count of images in Cloudinary uploads folder
-    try:
-        search_result = cloudinary.Search().expression("folder:uploads").max_results(1).execute()
-        count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
-    except Exception:
+    user_id = request.cookies.get('user_id')
+    username = request.cookies.get('username')
+    
+    # get current count of images in Cloudinary uploads folder for this user
+    if user_id and username:
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError):
+            uid = None
+        
+        if uid:
+            try:
+                search_result = cloudinary.Search().expression(f"folder:uploads AND context.user_id:{uid}").max_results(1).execute()
+                count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
+            except Exception:
+                count = 0
+        else:
+            count = 0
+    else:
         count = 0
 
-    username = request.cookies.get('username')
     user_data = get_user_db(username) if username else None
     
     # parse user data lists into arrays
@@ -198,9 +227,19 @@ def ui(request: Request):
 
 
 @app.get('/count')
-def count_endpoint():
+def count_endpoint(request: Request):
+    user_id = request.cookies.get('user_id')
+    username = request.cookies.get('username')
+    if not user_id or not username:
+        return JSONResponse({"count": 0})
+    
     try:
-        search_result = cloudinary.Search().expression("folder:uploads").max_results(1).execute()
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return JSONResponse({"count": 0})
+    
+    try:
+        search_result = cloudinary.Search().expression(f"folder:uploads AND context.user_id:{user_id}").max_results(1).execute()
         cnt = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
         return JSONResponse({"count": cnt})
     except Exception as e:
@@ -229,19 +268,28 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     
     try:
         insert_user(username, phone or '', email or '', family_members or '', insurance_companies or '')
+        # Get the new user's ID
+        user_data = get_user_db(username)
+        user_id = user_data.get('user_id')
     except Exception as e:
         return templates.TemplateResponse('signup.html', {"request": request, "message": f"Sign up failed: {e}"})
     
     # auto login
     resp = RedirectResponse(url='/', status_code=302)
+    resp.set_cookie('user_id', str(user_id), httponly=True)
     resp.set_cookie('username', username, httponly=True)
     return resp
 
 
 @app.post('/login')
 def login_post(request: Request, username: str = Form(...)):
+    user_data = get_user_db(username)
+    if not user_data:
+        return templates.TemplateResponse('login.html', {"request": request, "message": "Username not found"})
+    
+    user_id = user_data.get('user_id')
     resp = RedirectResponse(url='/', status_code=302)
-    # set simple username cookie (httponly)
+    resp.set_cookie('user_id', str(user_id), httponly=True)
     resp.set_cookie('username', username, httponly=True)
     return resp
 
@@ -249,6 +297,7 @@ def login_post(request: Request, username: str = Form(...)):
 @app.get('/logout')
 def logout(request: Request):
     resp = RedirectResponse(url='/login', status_code=302)
+    resp.delete_cookie('user_id')
     resp.delete_cookie('username')
     return resp
 
@@ -318,9 +367,12 @@ def profile_post(request: Request, email: Optional[str] = Form(None), phone: Opt
 @app.post('/upload')
 async def upload_receipt(request: Request, name: str = Form(...), date: Optional[str] = Form(None), image: UploadFile = File(...)):
     # require a logged-in user
+    user_id = request.cookies.get('user_id')
     username = request.cookies.get('username')
-    if not username:
+    if not user_id or not username:
         return templates.TemplateResponse('login.html', {"request": request, "message": "Please log in before uploading."})
+    
+    user_id = int(user_id)
 
     if not name:
         return JSONResponse({"error": "name is required"}, status_code=422)
@@ -343,8 +395,26 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
     except Exception:
         form = {}
 
-    refunded = 'yes' if form.get('refunded') in ('yes', 'on', 'true') else 'no'
-    sent_to_insurance = 'yes' if form.get('sent_to_insurance') in ('yes', 'on', 'true') else 'no'
+    # Support multiple insurance companies sent to
+    sent_to_list = []
+    for key in form:
+        if key.startswith('sent_to_insurance_'):
+            company = form.get(key, '').strip()
+            if company:
+                sent_to_list.append(company)
+    sent_to_insurance = '|'.join(sent_to_list) if sent_to_list else ''
+    
+    # Support multiple refunds (JSON format)
+    refund_details_list = []
+    for key in form:
+        if key.startswith('refund_company_'):
+            idx = key.replace('refund_company_', '')
+            company = form.get(f'refund_company_{idx}', '').strip()
+            amount = form.get(f'refund_amount_{idx}', '').strip()
+            if company and amount:
+                refund_details_list.append({"company": company, "amount": amount})
+    refund_details = json.dumps(refund_details_list) if refund_details_list else '[]'
+    
     insurance_company = (form.get('insurance_company') or '').strip()
     account_username = (form.get('account_username') or username).strip()
     try:
@@ -354,11 +424,25 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
     family_names = (form.get('family_names') or '').strip()
     how_work = (form.get('how_work') or '').strip()
 
-    # build Cloudinary context string (sanitize pipes/newlines)
+    # build Cloudinary context string with user_id and refund stage
     def _safe(v: str) -> str:
         return re.sub(r"[|\n\r]", '', (v or '').strip())
 
-    ctx_parts = [f"refund={_safe(refunded)}", f"sent_to_insurance={_safe(sent_to_insurance)}"]
+    # Determine refund stage
+    refund_stage = "received"
+    if refund_details_list:
+        refund_stage = "reimbursed"
+    elif sent_to_insurance:
+        refund_stage = "processing"
+
+    ctx_parts = [
+        f"user_id={user_id}",
+        f"username={_safe(username)}",
+        f"refund_stage={_safe(refund_stage)}",
+        f"refund_details={_safe(refund_details[:100])}"
+    ]
+    if sent_to_insurance:
+        ctx_parts.append(f"sent_to_insurance={_safe(sent_to_insurance)}")
     if insurance_company:
         ctx_parts.append(f"insurance_company={_safe(insurance_company)}")
     if account_username:
@@ -386,16 +470,16 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
         # stay on UI and show error message
         msg = f"Upload failed: {e}"
         try:
-            search_result = cloudinary.Search().expression("folder:uploads").max_results(1).execute()
+            search_result = cloudinary.Search().expression(f"folder:uploads AND context.username:{username}").max_results(1).execute()
             count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
         except Exception:
             count = 0
-        return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "name": name, "date": date_str, "count": count})
+        return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "name": name, "date": date_str, "count": count, "username": username})
 
-    # Success: store metadata in SQLite and show index UI with success message and the uploaded result
+    # Success: store metadata in SQLite and show index UI with success message
     msg = f"Uploaded: {result.get('public_id', public_id)}"
     try:
-        search_result = cloudinary.Search().expression("folder:uploads").max_results(1).execute()
+        search_result = cloudinary.Search().expression(f"folder:uploads AND context.username:{username}").max_results(1).execute()
         count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
     except Exception:
         count = 0
@@ -403,10 +487,12 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
     # save to sqlite
     rec = {
         'public_id': result.get('public_id', public_id),
+        'user_id': user_id,
+        'username': username,
         'name': name,
         'date': date_str,
-        'refunded': refunded,
         'sent_to_insurance': sent_to_insurance,
+        'refund_details': refund_details,
         'insurance_company': insurance_company,
         'account_username': account_username,
         'family_count': family_count,
@@ -429,7 +515,17 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
 @app.get('/search')
 def search(request: Request, name: Optional[str] = None, date: Optional[str] = None, refunded: Optional[str] = None, sent_to_insurance: Optional[str] = None, insurance_company: Optional[str] = None):
     """Search uploaded images by name, date and metadata using Cloudinary Search API."""
-    expr_parts = ["folder:uploads"]
+    user_id = request.cookies.get('user_id')
+    username = request.cookies.get('username')
+    if not user_id or not username:
+        return RedirectResponse(url='/login', status_code=302)
+    
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url='/login', status_code=302)
+    
+    expr_parts = [f"folder:uploads", f"context.user_id:{user_id}"]
 
     if name:
         # sanitize name to match how we build public_id
@@ -447,12 +543,15 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
             # ignore invalid date filter
             pass
 
-    # metadata filters stored in context string (e.g. refund=yes|sent_to_insurance=yes|insurance_company=Name)
+    # metadata filters stored in context string
     if refunded and refunded.lower() in ('yes', 'no'):
-        expr_parts.append(f"context:'refund={refunded.lower()}'")
+        expr_parts.append(f"context:'refund_stage=*{refunded}*'")
 
     if sent_to_insurance and sent_to_insurance.lower() in ('yes', 'no'):
-        expr_parts.append(f"context:'sent_to_insurance={sent_to_insurance.lower()}'")
+        if sent_to_insurance.lower() == 'yes':
+            expr_parts.append(f"context:'sent_to_insurance:*'")
+        else:
+            expr_parts.append(f"NOT context:'sent_to_insurance'")
 
     if insurance_company:
         safe_comp = re.sub(r'[^A-Za-z0-9_\- ]', '', insurance_company.strip())
@@ -465,7 +564,7 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
         search_result = cloudinary.Search().expression(expr).max_results(100).execute()
         resources = search_result.get('resources', [])
     except Exception as e:
-        return templates.TemplateResponse('index.html', {"request": request, "message": f"Search failed: {e}", "results": []})
+        return templates.TemplateResponse('index.html', {"request": request, "message": f"Search failed: {e}", "results": [], "username": username})
 
     # enrich results with DB metadata if available
     enriched = []
@@ -475,31 +574,71 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
             r['_db'] = db
         enriched.append(r)
 
-    return templates.TemplateResponse('index.html', {"request": request, "results": enriched, "name": name, "date": date, "refunded": refunded, "sent_to_insurance": sent_to_insurance, "insurance_company": insurance_company})
+    return templates.TemplateResponse('index.html', {"request": request, "results": enriched, "name": name, "date": date, "refunded": refunded, "sent_to_insurance": sent_to_insurance, "insurance_company": insurance_company, "username": username})
 
 
 @app.post('/update')
 def update_metadata(request: Request, public_id: str = Form(...), refunded: Optional[str] = Form(None), sent_to_insurance: Optional[str] = Form(None), insurance_company: Optional[str] = Form(None)):
     """Update metadata (context) for an existing image."""
+    user_id = request.cookies.get('user_id')
+    username = request.cookies.get('username')
+    if not user_id or not username:
+        return RedirectResponse(url='/login', status_code=302)
+    
     try:
-        refunded_val = 'yes' if refunded in ('yes', 'on', 'true') else 'no'
-        sent_val = 'yes' if sent_to_insurance in ('yes', 'on', 'true') else 'no'
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url='/login', status_code=302)
+    
+    # Verify user owns this receipt
+    db_rec = get_receipt_db(public_id)
+    if not db_rec or db_rec.get('user_id') != user_id:
+        return JSONResponse({"error": "Access denied"}, status_code=403)
+    
+    try:
+        # Parse refund details from form (multiple refunds)
+        refund_details_list = []
+        refund_stage = "received"
+        
+        # Check if any refunds in form
+        sent_to_list = []
+        if sent_to_insurance and sent_to_insurance.lower() in ('yes', 'on', 'true'):
+            refund_stage = "processing"
+        
         insurance_val = (insurance_company or '').strip()
-
-        ctx_parts = [f"refund={refunded_val}", f"sent_to_insurance={sent_val}"]
         if insurance_val:
-            safe_company = re.sub(r"[|]", '', insurance_val)
-            ctx_parts.append(f"insurance_company={safe_company}")
+            # Simple update for now - in full implementation, would parse multiple refunds
+            refund_details_list.append({"company": insurance_val, "amount": "0"})
+            refund_stage = "reimbursed"
+        
+        refund_details = json.dumps(refund_details_list)
+        sent_val = sent_to_insurance if sent_to_insurance and sent_to_insurance.lower() in ('yes', 'on', 'true') else ''
+
+        def _safe(v: str) -> str:
+            return re.sub(r"[|\n\r]", '', (v or '').strip())
+
+        ctx_parts = [
+            f"username={_safe(username)}",
+            f"refund_stage={_safe(refund_stage)}",
+            f"refund_details={_safe(refund_details[:100])}"
+        ]
+        if sent_val:
+            ctx_parts.append(f"sent_to_insurance={_safe(sent_val)}")
+        if insurance_val:
+            ctx_parts.append(f"insurance_company={_safe(insurance_val)}")
+        
         context_str = '|'.join(ctx_parts)
-
         cloudinary.uploader.add_context(context_str, public_id=public_id)
+        
         # also update sqlite
-        update_fields = {'refunded': refunded_val, 'sent_to_insurance': sent_val}
-        if insurance_val:
-            update_fields['insurance_company'] = insurance_val
+        update_fields = {
+            'sent_to_insurance': sent_val,
+            'refund_details': refund_details,
+            'insurance_company': insurance_val
+        }
         update_receipt_db(public_id, update_fields)
     except Exception as e:
-        return templates.TemplateResponse('index.html', {"request": request, "message": f"Update failed: {e}", "results": []})
+        return JSONResponse({"error": str(e)}, status_code=500)
 
     # fetch updated resource
     try:
@@ -508,16 +647,31 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
         res = None
 
     msg = f"Updated metadata for {public_id}"
-    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [res] if res else [], "count": 0})
+    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [res] if res else [], "count": 0, "username": username})
 
 
 @app.post('/delete')
 def delete_image(request: Request, public_id: str = Form(...)):
     """Delete an image by its Cloudinary public_id."""
+    user_id = request.cookies.get('user_id')
+    username = request.cookies.get('username')
+    if not user_id or not username:
+        return RedirectResponse(url='/login', status_code=302)
+    
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url='/login', status_code=302)
+    
+    # Verify user owns this receipt
+    db_rec = get_receipt_db(public_id)
+    if not db_rec or db_rec.get('user_id') != user_id:
+        return JSONResponse({"error": "Access denied"}, status_code=403)
+    
     try:
         res = cloudinary.uploader.destroy(public_id, resource_type='image')
     except Exception as e:
-        return templates.TemplateResponse('index.html', {"request": request, "message": f"Delete failed: {e}", "results": []})
+        return templates.TemplateResponse('index.html', {"request": request, "message": f"Delete failed: {e}", "results": [], "username": username})
 
     result_flag = res.get('result')
     if result_flag in ('ok', 'deleted'):
@@ -531,5 +685,5 @@ def delete_image(request: Request, public_id: str = Form(...)):
     except Exception:
         pass
 
-    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": []})
+    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "username": username})
 
