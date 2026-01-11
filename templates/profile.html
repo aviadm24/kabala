@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReimbursementTracker - Profile Settings</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f8fafc;
+        color: #333;
+      }
+      .header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        padding: 20px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .header-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo-icon {
+        font-size: 32px;
+      }
+      .logo-text h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .logo-text p {
+        font-size: 12px;
+        opacity: 0.9;
+        margin: 0;
+      }
+      .nav-links {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      .nav-links a {
+        color: white;
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+      .nav-links a:hover {
+        opacity: 0.8;
+      }
+      .logout-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .logout-btn:hover {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px 20px;
+      }
+      .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e3c72;
+        margin-bottom: 8px;
+      }
+      .page-subtitle {
+        font-size: 14px;
+        color: #7a8a99;
+        margin-bottom: 30px;
+      }
+      .section {
+        background: white;
+        border-radius: 10px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      }
+      .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-title::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 24px;
+        background: #2a5298;
+        border-radius: 2px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      input[type=text], input[type=email], input[type=tel], textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid #e0e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s;
+      }
+      input[type=text]:focus, input[type=email]:focus, input[type=tel]:focus, textarea:focus {
+        outline: none;
+        border-color: #2a5298;
+        box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+      }
+      .item-list {
+        margin-top: 12px;
+      }
+      .item-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+        padding: 12px 14px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      .item-list-item.empty {
+        color: #a0a8b0;
+        font-style: italic;
+      }
+      .item-list-item button {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+      .item-list-item button:hover {
+        background: #c0392b;
+      }
+      .add-item-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .add-item-group input {
+        flex: 1;
+      }
+      .add-item-group button {
+        background: #2a5298;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .add-item-group button:hover {
+        background: #1e3c72;
+      }
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .btn-primary {
+        flex: 1;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(42, 82, 152, 0.2);
+      }
+      .btn-secondary {
+        flex: 1;
+        background: #e0e8f0;
+        color: #1e3c72;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s;
+      }
+      .btn-secondary:hover {
+        background: #d0dce8;
+      }
+      .success-message {
+        background: #efe;
+        color: #3c3;
+        padding: 14px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border-left: 4px solid #3c3;
+      }
+      .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 14px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border-left: 4px solid #c33;
+      }
+      .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #2a5298;
+        padding: 14px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #1565c0;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px 16px;
+        }
+        .page-title {
+          font-size: 24px;
+        }
+        .button-group {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">📋</div>
+          <div class="logo-text">
+            <h1>ReimbursementTracker</h1>
+            <p>Insurance Claim Management System</p>
+          </div>
+        </div>
+        <div class="nav-links">
+          <a href="/">Dashboard</a>
+          <a href="/profile" style="font-weight: 600; opacity: 1;">Profile</a>
+          <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="page-title">👤 Profile Settings</div>
+      <p class="page-subtitle">Manage your account information and preferences</p>
+
+      {% if message %}
+        {% if 'successfully' in message or 'added' in message %}
+          <div class="success-message">{{ message }}</div>
+        {% else %}
+          <div class="error-message">{{ message }}</div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="/profile">
+        <div class="section">
+          <div class="section-title">Personal Information</div>
+          
+          <div class="info-box">
+            💡 Your username cannot be changed. Contact support if you need to create a new account.
+          </div>
+
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" value="{{ username }}" disabled style="background:#f0f4f8;cursor:not-allowed;" />
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email" placeholder="your.email@example.com" value="{{ email or '' }}" />
+          </div>
+
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" name="phone" placeholder="(555) 123-4567" value="{{ phone or '' }}" />
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Family Members</div>
+          
+          <p style="font-size: 13px; color: #7a8a99; margin-bottom: 16px;">
+            Add family members who may need receipts or be included in insurance claims.
+          </p>
+
+          <div class="item-list" id="family-list">
+            {% if family_members %}
+              {% for fm in family_members %}
+                <div class="item-list-item">
+                  <span>{{ fm }}</span>
+                  <button type="button" onclick="removeFamilyMember('{{ fm }}')">Remove</button>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="item-list-item empty">No family members added yet</div>
+            {% endif %}
+          </div>
+
+          <div class="add-item-group">
+            <input type="text" id="new-family-input" placeholder="Enter family member name..." />
+            <button type="button" onclick="addFamilyMember()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Insurance Companies</div>
+          
+          <p style="font-size: 13px; color: #7a8a99; margin-bottom: 16px;">
+            Add insurance companies that provide reimbursements for easier tracking.
+          </p>
+
+          <div class="item-list" id="insurance-list">
+            {% if insurance_companies %}
+              {% for ic in insurance_companies %}
+                <div class="item-list-item">
+                  <span>{{ ic }}</span>
+                  <button type="button" onclick="removeInsuranceCompany('{{ ic }}')">Remove</button>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="item-list-item empty">No insurance companies added yet</div>
+            {% endif %}
+          </div>
+
+          <div class="add-item-group">
+            <input type="text" id="new-insurance-input" placeholder="Enter insurance company name..." />
+            <button type="button" onclick="addInsuranceCompany()">+ Add</button>
+          </div>
+        </div>
+
+        <input type="hidden" id="family-members-input" name="family_members" value="{{ family_members_str or '' }}" />
+        <input type="hidden" id="insurance-companies-input" name="insurance_companies" value="{{ insurance_companies_str or '' }}" />
+
+        <div class="button-group">
+          <button type="submit" class="btn-primary">💾 Save Changes</button>
+          <a href="/" class="btn-secondary">↩ Back to Dashboard</a>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      let familyMembers = [];
+      let insuranceCompanies = [];
+
+      function initLists() {
+        const fmInput = document.getElementById('family-members-input');
+        const icInput = document.getElementById('insurance-companies-input');
+        
+        if (fmInput.value) {
+          familyMembers = fmInput.value.split(',').map(x => x.trim()).filter(x => x);
+        }
+        if (icInput.value) {
+          insuranceCompanies = icInput.value.split(',').map(x => x.trim()).filter(x => x);
+        }
+      }
+
+      function addFamilyMember() {
+        const input = document.getElementById('new-family-input');
+        const name = input.value.trim();
+        
+        if (!name) {
+          alert('Please enter a family member name');
+          return;
+        }
+        
+        if (familyMembers.includes(name)) {
+          alert('This family member is already added');
+          return;
+        }
+        
+        familyMembers.push(name);
+        updateFamilyList();
+        input.value = '';
+        input.focus();
+      }
+
+      function removeFamilyMember(name) {
+        familyMembers = familyMembers.filter(x => x !== name);
+        updateFamilyList();
+      }
+
+      function updateFamilyList() {
+        const list = document.getElementById('family-list');
+        if (familyMembers.length === 0) {
+          list.innerHTML = '<div class="item-list-item empty">No family members added yet</div>';
+        } else {
+          list.innerHTML = familyMembers.map(fm => `
+            <div class="item-list-item">
+              <span>${fm}</span>
+              <button type="button" onclick="removeFamilyMember('${fm}')">Remove</button>
+            </div>
+          `).join('');
+        }
+        document.getElementById('family-members-input').value = familyMembers.join(', ');
+      }
+
+      function addInsuranceCompany() {
+        const input = document.getElementById('new-insurance-input');
+        const name = input.value.trim();
+        
+        if (!name) {
+          alert('Please enter an insurance company name');
+          return;
+        }
+        
+        if (insuranceCompanies.includes(name)) {
+          alert('This insurance company is already added');
+          return;
+        }
+        
+        insuranceCompanies.push(name);
+        updateInsuranceList();
+        input.value = '';
+        input.focus();
+      }
+
+      function removeInsuranceCompany(name) {
+        insuranceCompanies = insuranceCompanies.filter(x => x !== name);
+        updateInsuranceList();
+      }
+
+      function updateInsuranceList() {
+        const list = document.getElementById('insurance-list');
+        if (insuranceCompanies.length === 0) {
+          list.innerHTML = '<div class="item-list-item empty">No insurance companies added yet</div>';
+        } else {
+          list.innerHTML = insuranceCompanies.map(ic => `
+            <div class="item-list-item">
+              <span>${ic}</span>
+              <button type="button" onclick="removeInsuranceCompany('${ic}')">Remove</button>
+            </div>
+          `).join('');
+        }
+        document.getElementById('insurance-companies-input').value = insuranceCompanies.join(', ');
+      }
+
+      // Allow Enter key to add items
+      document.getElementById('new-family-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addFamilyMember();
+        }
+      });
+
+      document.getElementById('new-insurance-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addInsuranceCompany();
+        }
+      });
+
+      // Initialize
+      initLists();
+    </script>
+  </body>
+</html>

@@ -3,85 +3,831 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Upload Image</title>
+    <title>ReimbursementTracker - Dashboard</title>
     <style>
-      body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; }
-      label { display:block; margin-top:12px; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f8fafc;
+        color: #333;
+      }
+      .header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        padding: 20px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .header-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo-icon {
+        font-size: 32px;
+      }
+      .logo-text h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .logo-text p {
+        font-size: 12px;
+        opacity: 0.9;
+        margin: 0;
+      }
+      .user-section {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .user-info {
+        text-align: right;
+      }
+      .user-info p {
+        margin: 0;
+        font-size: 14px;
+      }
+      .username {
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .logout-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .logout-btn:hover {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 30px 20px;
+      }
+      .stats-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .stat-label {
+        font-size: 14px;
+        color: #7a8a99;
+        font-weight: 500;
+      }
+      .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2a5298;
+      }
+      .stat-action {
+        background: #2a5298;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+      .stat-action:hover {
+        background: #1e3c72;
+      }
+      .section {
+        background: white;
+        border-radius: 10px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      }
+      .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-title::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 24px;
+        background: #2a5298;
+        border-radius: 2px;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+      label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      input[type=text], input[type=date], input[type=email], input[type=tel], input[type=number], select, textarea {
+        padding: 10px 12px;
+        border: 2px solid #e0e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s;
+      }
+      input[type=text]:focus, input[type=date]:focus, input[type=email]:focus, input[type=tel]:focus, input[type=number]:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #2a5298;
+        box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+      }
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .checkbox-group input[type=checkbox] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+      .checkbox-group label {
+        margin: 0;
+        text-transform: none;
+        letter-spacing: normal;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(42, 82, 152, 0.2);
+      }
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+      .btn-secondary {
+        background: #e0e8f0;
+        color: #1e3c72;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .btn-secondary:hover {
+        background: #d0dce8;
+      }
+      .btn-danger {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+      .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border-left: 4px solid #c33;
+      }
+      .success-message {
+        background: #efe;
+        color: #3c3;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border-left: 4px solid #3c3;
+      }
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .receipt-card {
+        border: 2px solid #e0e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.2s;
+      }
+      .receipt-card:hover {
+        border-color: #2a5298;
+        box-shadow: 0 8px 16px rgba(42, 82, 152, 0.1);
+      }
+      .receipt-image {
+        width: 100%;
+        height: 200px;
+        background: #f0f4f8;
+        overflow: hidden;
+      }
+      .receipt-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .receipt-content {
+        padding: 16px;
+      }
+      .receipt-header {
+        margin-bottom: 12px;
+      }
+      .receipt-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 4px;
+      }
+      .receipt-date {
+        font-size: 12px;
+        color: #7a8a99;
+      }
+      .receipt-id {
+        font-size: 11px;
+        color: #a0a8b0;
+        word-break: break-all;
+        margin-top: 8px;
+      }
+      .receipt-metadata {
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+      .metadata-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .metadata-item:last-child {
+        margin-bottom: 0;
+      }
+      .metadata-label {
+        color: #7a8a99;
+        font-weight: 500;
+      }
+      .metadata-value {
+        color: #1e3c72;
+        font-weight: 600;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .status-refunded {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .timeline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 16px 0 12px 0;
+        padding: 12px 0;
+        border-top: 1px solid #e0e8f0;
+        border-bottom: 1px solid #e0e8f0;
+      }
+      .timeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+      }
+      .timeline-step::after {
+        content: '';
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #e0e8f0;
+        z-index: 0;
+      }
+      .timeline-step:last-child::after {
+        display: none;
+      }
+      .timeline-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #e0e8f0;
+        border: 3px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        position: relative;
+        z-index: 1;
+        transition: all 0.2s;
+        margin-bottom: 8px;
+      }
+      .timeline-step.active .timeline-dot {
+        background: #2a5298;
+        color: white;
+      }
+      .timeline-step.completed .timeline-dot {
+        background: #27ae60;
+        color: white;
+      }
+      .timeline-step.completed::after {
+        background: #27ae60;
+      }
+      .timeline-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #7a8a99;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .timeline-step.active .timeline-label {
+        color: #2a5298;
+        font-weight: 700;
+      }
+      .timeline-step.completed .timeline-label {
+        color: #27ae60;
+        font-weight: 700;
+      }
+      .receipt-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .receipt-actions a, .receipt-actions button {
+        flex: 1;
+        padding: 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .edit-btn {
+        background: #2a5298;
+        color: white;
+      }
+      .edit-btn:hover {
+        background: #1e3c72;
+      }
+      .delete-btn {
+        background: #e74c3c;
+        color: white;
+      }
+      .delete-btn:hover {
+        background: #c0392b;
+      }
+      .open-btn {
+        background: #27ae60;
+        color: white;
+      }
+      .open-btn:hover {
+        background: #229954;
+      }
+      .edit-form {
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 6px;
+        margin-top: 12px;
+        display: none;
+      }
+      .edit-form.active {
+        display: block;
+      }
+      .edit-form-group {
+        margin-bottom: 10px;
+      }
+      .edit-form-group label {
+        font-size: 12px;
+      }
+      .edit-form-group input, .edit-form-group select {
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+      .edit-form-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e0e8f0;
+      }
+      .results-count {
+        font-size: 14px;
+        color: #7a8a99;
+      }
+      .no-results {
+        text-align: center;
+        padding: 40px 20px;
+        color: #7a8a99;
+      }
+      .no-results-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+      @media (max-width: 768px) {
+        .header-content {
+          flex-direction: column;
+          gap: 16px;
+        }
+        .stats-bar {
+          grid-template-columns: 1fr;
+        }
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .results-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
-    <h1>Upload Image to Cloudinary</h1>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div>Saved images: <strong id="count-val">{{ count or 0 }}</strong></div>
-      <button id="refresh-count" style="padding:6px 8px;">Refresh count</button>
-    </div>
-    {% if message %}
-      <div style="color: red;">{{ message }}</div>
-    {% endif %}
-
-    <form method="post" action="/upload" enctype="multipart/form-data">
-      <label>Name
-        <input type="text" name="name" required value="{{ name or '' }}" />
-      </label>
-
-      <label>Date
-        <input type="date" name="date" value="{{ date or '' }}" />
-      </label>
-
-      <label>Image file
-        <input type="file" name="image" accept="image/*" required />
-      </label>
-
-      <button type="submit" style="margin-top:12px;">Upload</button>
-    </form>
-
-    <hr />
-
-    <h2>Search Uploads</h2>
-    <form method="get" action="/search">
-      <label>Name (partial)
-        <input type="text" name="name" value="{{ name or '' }}" />
-      </label>
-      <label>Date
-        <input type="date" name="date" value="{{ date or '' }}" />
-      </label>
-      <button type="submit" style="margin-top:12px;">Search</button>
-    </form>
-
-    {% if results %}
-      <h3>Results ({{ results|length }})</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;">
-        {% for r in results %}
-          <div style="width:200px;border:1px solid #ddd;padding:8px;">
-            {% if r.secure_url %}
-              <img src="{{ r.secure_url }}" style="width:100%;height:auto;" />
-            {% endif %}
-            <div style="font-size:12px;margin-top:6px;">id: {{ r.public_id }}</div>
-            <div style="font-size:12px;color:#666;">created: {{ r.created_at }}</div>
-            {% if r.secure_url %}
-              <div><a href="{{ r.secure_url }}" target="_blank">Open</a></div>
-            {% endif %}
-            <form method="post" action="/delete" onsubmit="return confirm('Are you sure you want to permanently delete this image?');" style="margin-top:8px;">
-              <input type="hidden" name="public_id" value="{{ r.public_id }}" />
-              <button type="submit" style="background:#c33;color:#fff;border:none;padding:6px 8px;cursor:pointer;">Delete</button>
-            </form>
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">📋</div>
+          <div class="logo-text">
+            <h1>ReimbursementTracker</h1>
+            <p>Insurance Claim Management System</p>
           </div>
-        {% endfor %}
+        </div>
+        <div class="user-section">
+          <div class="user-info">
+            {% if username %}
+              <p class="username">👤 {{ username }}</p>
+              <p style="font-size:12px;color:#ccc;">Account Owner</p>
+            {% else %}
+              <a href="/login" style="color:white;text-decoration:none;font-size:14px;font-weight:600;">Sign In</a>
+            {% endif %}
+          </div>
+          {% if username %}
+            <div style="display:flex;gap:12px;">
+              <a href="/profile" style="color:white;text-decoration:none;font-size:13px;padding:8px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">⚙️ Profile</a>
+              <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+          {% endif %}
+        </div>
       </div>
-    {% endif %}
+    </div>
+
+    <div class="container">
+      {% if message %}
+        <div class="success-message">{{ message }}</div>
+      {% endif %}
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div>
+            <div class="stat-label">📁 Receipts Stored</div>
+            <div class="stat-value" id="count-val">{{ count or 0 }}</div>
+          </div>
+          <button id="refresh-count" class="stat-action">Refresh</button>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="stat-label">✅ Status</div>
+            <div class="stat-value" style="color:#27ae60;">Active</div>
+          </div>
+          <div style="font-size:12px;color:#7a8a99;text-align:right;">Ready to track claims</div>
+        </div>
+      </div>
+
+      {% if username %}
+        <div class="section">
+          <div class="section-title">📸 Upload Receipt</div>
+          <form method="post" action="/upload" enctype="multipart/form-data">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="name">Receipt Name *</label>
+                <input type="text" id="name" name="name" required placeholder="e.g., Doctor Visit - Jan 15" value="{{ name or '' }}" />
+              </div>
+
+              <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" value="{{ date or '' }}" />
+              </div>
+
+              <div class="form-group" style="grid-column: span 2;">
+                <label for="image">Receipt Image *</label>
+                <input type="file" id="image" name="image" accept="image/*" required />
+              </div>
+            </div>
+
+            <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
+              <div class="section-title" style="margin: 0 0 16px 0; font-size: 15px;">Claim Status</div>
+              <div class="form-grid">
+                <div class="checkbox-group">
+                  <input type="checkbox" id="refunded" name="refunded" value="yes" />
+                  <label for="refunded">✓ Refunded</label>
+                </div>
+
+                <div class="checkbox-group">
+                  <input type="checkbox" id="sent_to_insurance" name="sent_to_insurance" value="yes" />
+                  <label for="sent_to_insurance">📤 Sent to Insurance</label>
+                </div>
+
+                <div class="form-group">
+                  <label for="insurance_company">Insurance Company</label>
+                  <select id="insurance_company" name="insurance_company">
+                    <option value="">-- Select Company --</option>
+                    {% for ic in insurance_companies %}
+                      <option value="{{ ic }}">{{ ic }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="family_count">Family Members Count</label>
+                  <input type="number" id="family_count" name="family_count" min="0" placeholder="0" />
+                </div>
+
+                <div class="form-group">
+                  <label for="family_names">Family Members</label>
+                  <select id="family_names" name="family_names">
+                    <option value="">-- Select Member --</option>
+                    {% for fm in family_members %}
+                      <option value="{{ fm }}">{{ fm }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="how_work">Notes</label>
+                  <input type="text" id="how_work" name="how_work" placeholder="Any additional notes..." />
+                </div>
+              </div>
+            </div>
+
+            <input type="hidden" name="account_username" value="{{ username or '' }}" />
+            <button type="submit" class="btn-primary">💾 Upload Receipt</button>
+          </form>
+        </div>
+
+        <div class="section">
+          <div class="section-title">🔍 Search & Filter</div>
+          <form method="get" action="/search">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="search_name">Receipt Name</label>
+                <input type="text" id="search_name" name="name" placeholder="Search by name..." value="{{ name or '' }}" />
+              </div>
+
+              <div class="form-group">
+                <label for="search_date">Date</label>
+                <input type="date" id="search_date" name="date" value="{{ date or '' }}" />
+              </div>
+
+              <div class="form-group">
+                <label for="search_refunded">Refund Status</label>
+                <select id="search_refunded" name="refunded">
+                  <option value="">-- Any Status --</option>
+                  <option value="yes" {% if refunded=='yes' %}selected{% endif %}>✓ Refunded</option>
+                  <option value="no" {% if refunded=='no' %}selected{% endif %}>⏳ Pending</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="search_insurance">Insurance Status</label>
+                <select id="search_insurance" name="sent_to_insurance">
+                  <option value="">-- Any Status --</option>
+                  <option value="yes" {% if sent_to_insurance=='yes' %}selected{% endif %}>📤 Sent</option>
+                  <option value="no" {% if sent_to_insurance=='no' %}selected{% endif %}>📋 Not Sent</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="search_company">Insurance Company</label>
+                <input type="text" id="search_company" name="insurance_company" placeholder="Search company..." value="{{ insurance_company or '' }}" />
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+              <button type="submit" class="btn-primary">🔍 Search</button>
+              <a href="/" class="btn-secondary" style="padding:12px 20px;text-align:center;text-decoration:none;">↻ Clear Filters</a>
+            </div>
+          </form>
+        </div>
+      {% else %}
+        <div class="section" style="text-align:center;padding:40px;">
+          <p style="font-size:16px;color:#7a8a99;margin-bottom:20px;">Please sign in to upload and manage receipts</p>
+          <a href="/login" class="btn-primary">🔐 Sign In</a>
+        </div>
+      {% endif %}
+
+      {% if results %}
+        <div class="section">
+          <div class="results-header">
+            <div class="section-title" style="margin:0;padding:0;border:none;">📋 Your Receipts</div>
+            <div class="results-count">Found {{ results|length }} receipt{% if results|length != 1 %}s{% endif %}</div>
+          </div>
+          <div class="results-grid">
+            {% for r in results %}
+              <div class="receipt-card">
+                {% if r.secure_url %}
+                  <div class="receipt-image">
+                    <img src="{{ r.secure_url }}" alt="{{ r.public_id }}" />
+                  </div>
+                {% else %}
+                  <div class="receipt-image" style="display:flex;align-items:center;justify-content:center;color:#ccc;font-size:48px;">🖼️</div>
+                {% endif %}
+                
+                <div class="receipt-content">
+                  <div class="receipt-header">
+                    <div class="receipt-name">{{ r.public_id }}</div>
+                    <div class="receipt-date">{{ r.created_at }}</div>
+                  </div>
+
+                  {% set meta = r.context.custom if r.context and r.context.custom else {} %}
+                  
+                  <!-- Timeline showing invoice progress -->
+                  <div class="timeline">
+                    <div class="timeline-step completed">
+                      <div class="timeline-dot">📋</div>
+                      <div class="timeline-label">Received</div>
+                    </div>
+                    <div class="timeline-step completed">
+                      <div class="timeline-dot">📤</div>
+                      <div class="timeline-label">Uploaded</div>
+                    </div>
+                    <div class="timeline-step {% if meta.get('sent_to_insurance') == 'yes' %}completed{% else %}{% endif %}">
+                      <div class="timeline-dot">📧</div>
+                      <div class="timeline-label">Sent</div>
+                    </div>
+                    <div class="timeline-step {% if meta.get('sent_to_insurance') == 'yes' %}active{% else %}{% endif %}">
+                      <div class="timeline-dot">⏳</div>
+                      <div class="timeline-label">Processing</div>
+                    </div>
+                    <div class="timeline-step {% if meta.get('refund') == 'yes' %}completed{% else %}{% endif %}">
+                      <div class="timeline-dot">✅</div>
+                      <div class="timeline-label">Reimbursed</div>
+                    </div>
+                  </div>
+
+                  <div class="receipt-metadata">
+                    <div class="metadata-item">
+                      <span class="metadata-label">Status:</span>
+                      <span class="status-badge {% if meta.get('refund') == 'yes' %}status-refunded{% else %}status-pending{% endif %}">
+                        {% if meta.get('refund') == 'yes' %}✓ Refunded{% else %}⏳ Pending{% endif %}
+                      </span>
+                    </div>
+                    <div class="metadata-item">
+                      <span class="metadata-label">Insurance:</span>
+                      <span class="metadata-value">{% if meta.get('sent_to_insurance') == 'yes' %}📤 Sent{% else %}📋 Not Sent{% endif %}</span>
+                    </div>
+                    {% if meta.get('insurance_company') %}
+                      <div class="metadata-item">
+                        <span class="metadata-label">Company:</span>
+                        <span class="metadata-value">{{ meta.get('insurance_company') }}</span>
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  <div class="receipt-id">ID: {{ r.public_id }}</div>
+
+                  <div class="receipt-actions">
+                    {% if r.secure_url %}
+                      <a href="{{ r.secure_url }}" target="_blank" class="open-btn">🔗 Open</a>
+                    {% endif %}
+                    <button type="button" class="edit-btn" onclick="toggleEditForm(this)">✏️ Edit</button>
+                    <form method="post" action="/delete" onsubmit="return confirm('Are you sure you want to permanently delete this receipt?');" style="flex:1;margin:0;">
+                      <input type="hidden" name="public_id" value="{{ r.public_id }}" />
+                      <button type="submit" class="delete-btn" style="width:100%;">🗑️ Delete</button>
+                    </form>
+                  </div>
+
+                  <div class="edit-form">
+                    <form method="post" action="/update">
+                      <input type="hidden" name="public_id" value="{{ r.public_id }}" />
+                      <div class="edit-form-group">
+                        <label>Refunded</label>
+                        <select name="refunded" style="width:100%;">
+                          <option value="no" {% if not meta or meta.get('refund') != 'yes' %}selected{% endif %}>No</option>
+                          <option value="yes" {% if meta and meta.get('refund') == 'yes' %}selected{% endif %}>Yes</option>
+                        </select>
+                      </div>
+                      <div class="edit-form-group">
+                        <label>Sent to Insurance</label>
+                        <select name="sent_to_insurance" style="width:100%;">
+                          <option value="no" {% if not meta or meta.get('sent_to_insurance') != 'yes' %}selected{% endif %}>No</option>
+                          <option value="yes" {% if meta and meta.get('sent_to_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+                        </select>
+                      </div>
+                      <div class="edit-form-group">
+                        <label>Insurance Company</label>
+                        <input type="text" name="insurance_company" value="{{ meta.get('insurance_company') if meta else '' }}" style="width:100%;" />
+                      </div>
+                      <div class="edit-form-actions">
+                        <button type="submit" class="btn-primary" style="padding:6px 12px;font-size:12px;">Save</button>
+                        <button type="button" class="btn-secondary" onclick="toggleEditForm(event.target.closest('.edit-form'))" style="padding:6px 12px;font-size:12px;">Cancel</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% elif results is defined and not results %}
+        <div class="section">
+          <div class="no-results">
+            <div class="no-results-icon">🔍</div>
+            <p>No receipts found matching your search criteria</p>
+            <p style="font-size:12px;margin-top:8px;"><a href="/" style="color:#2a5298;text-decoration:none;">View all receipts</a></p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
 
     <script>
-      document.getElementById('refresh-count').addEventListener('click', async function(){
-        try{
+      function toggleEditForm(el) {
+        const form = el.closest('.receipt-card').querySelector('.edit-form');
+        form.classList.toggle('active');
+      }
+
+      document.getElementById('refresh-count')?.addEventListener('click', async function(){
+        try {
           const r = await fetch('/count');
           const j = await r.json();
           if(j.count !== undefined){
             document.getElementById('count-val').textContent = j.count;
-          } else if(j.error){
-            alert('Count failed: ' + j.error);
           }
-        }catch(err){
-          alert('Count request failed: ' + err);
+        } catch(err) {
+          console.error('Count failed:', err);
         }
       });
     </script>
