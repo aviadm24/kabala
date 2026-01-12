@@ -11,6 +11,9 @@ import cloudinary
 import cloudinary.uploader
 from typing import Optional
 import sqlite3
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+import logging
+from logging.handlers import RotatingFileHandler
 
 # SQLite DB
 DB_PATH = os.path.join(os.path.dirname(__file__), 'receipts.db')
@@ -153,6 +156,38 @@ ensure_db()
 
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 
+# Configure logging
+LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+logger = logging.getLogger('kabala')
+logger.setLevel(logging.DEBUG)
+
+# File handler with rotation
+file_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, 'app.log'),
+    maxBytes=10_000_000,  # 10MB
+    backupCount=5
+)
+file_handler.setLevel(logging.DEBUG)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Formatter
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+logger.info('Application started')
+
 # Templates
 templates = Jinja2Templates(directory="templates")
 
@@ -165,9 +200,7 @@ api_key = os.environ.get('CLOUDINARY_API_KEY')
 api_secret = os.environ.get('CLOUDINARY_API_SECRET')
 
 if not (cloud_name and api_key and api_secret):
-    app.logger = app.logger if hasattr(app, 'logger') else None
-    # log via print if logger missing
-    print('Warning: Cloudinary credentials are not set in environment variables')
+    logger.warning('Cloudinary credentials are not set in environment variables')
 
 cloudinary.config(
     cloud_name=cloud_name,
@@ -175,6 +208,40 @@ cloudinary.config(
     api_secret=api_secret,
     secure=True,
 )
+
+# Cookie signing with itsdangerous
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    # Generate a default key (use env var in production!)
+    import secrets
+    SECRET_KEY = secrets.token_urlsafe(32)
+    logger.warning('SECRET_KEY not set in environment. Using generated key (not persistent).')
+
+serializer = URLSafeTimedSerializer(SECRET_KEY, salt='cookie-signer')
+
+
+def sign_cookie_value(value: str) -> str:
+    """Sign a cookie value for security."""
+    return serializer.dumps(value)
+
+
+def verify_cookie_value(signed_value: str, max_age: int = None) -> Optional[str]:
+    """Verify and unsign a cookie value. Returns None if invalid."""
+    try:
+        return serializer.loads(signed_value, max_age=max_age)
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+def get_verified_cookies(request: Request) -> tuple[Optional[str], Optional[str]]:
+    """Safely get and verify user_id and username cookies. Returns (user_id, username) or (None, None)."""
+    user_id_signed = request.cookies.get('user_id')
+    username_signed = request.cookies.get('username')
+    
+    user_id = verify_cookie_value(user_id_signed) if user_id_signed else None
+    username = verify_cookie_value(username_signed) if username_signed else None
+    
+    return user_id, username
 
 
 def safe_public_id(name: str, date_str: str) -> str:
@@ -191,8 +258,7 @@ def health_check():
 
 @app.get('/')
 def ui(request: Request):
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     
     # get current count of images in Cloudinary uploads folder for this user
     if user_id and username:
@@ -228,8 +294,7 @@ def ui(request: Request):
 
 @app.get('/count')
 def count_endpoint(request: Request):
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return JSONResponse({"count": 0})
     
@@ -259,11 +324,13 @@ def signup_get(request: Request):
 @app.post('/signup')
 def signup_post(request: Request, username: str = Form(...), phone: Optional[str] = Form(None), email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), insurance_companies: Optional[str] = Form(None)):
     if not username:
+        logger.warning('Signup attempt without username')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username is required"})
     
     # check if user already exists
     existing = get_user_db(username)
     if existing:
+        logger.warning(f'Signup attempt with existing username: {username}')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username already exists. Please try another or sign in."})
     
     try:
@@ -271,13 +338,15 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
         # Get the new user's ID
         user_data = get_user_db(username)
         user_id = user_data.get('user_id')
+        logger.info(f'User signup successful: username={username}, user_id={user_id}')
     except Exception as e:
+        logger.error(f'Sign up failed for {username}: {e}')
         return templates.TemplateResponse('signup.html', {"request": request, "message": f"Sign up failed: {e}"})
     
     # auto login
     resp = RedirectResponse(url='/', status_code=302)
-    resp.set_cookie('user_id', str(user_id), httponly=True)
-    resp.set_cookie('username', username, httponly=True)
+    resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=True, samesite='lax')
+    resp.set_cookie('username', sign_cookie_value(username), httponly=True, secure=True, samesite='lax')
     return resp
 
 
@@ -285,17 +354,21 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
 def login_post(request: Request, username: str = Form(...)):
     user_data = get_user_db(username)
     if not user_data:
+        logger.warning(f'Login attempt with non-existent username: {username}')
         return templates.TemplateResponse('login.html', {"request": request, "message": "Username not found"})
     
     user_id = user_data.get('user_id')
+    logger.info(f'User login successful: username={username}, user_id={user_id}')
     resp = RedirectResponse(url='/', status_code=302)
-    resp.set_cookie('user_id', str(user_id), httponly=True)
-    resp.set_cookie('username', username, httponly=True)
+    resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=True, samesite='lax')
+    resp.set_cookie('username', sign_cookie_value(username), httponly=True, secure=True, samesite='lax')
     return resp
 
 
 @app.get('/logout')
 def logout(request: Request):
+    user_id, username = get_verified_cookies(request)
+    logger.info(f'User logout: username={username}, user_id={user_id}')
     resp = RedirectResponse(url='/login', status_code=302)
     resp.delete_cookie('user_id')
     resp.delete_cookie('username')
@@ -304,8 +377,8 @@ def logout(request: Request):
 
 @app.get('/profile')
 def profile_get(request: Request):
-    username = request.cookies.get('username')
-    if not username:
+    user_id, username = get_verified_cookies(request)
+    if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
     user_data = get_user_db(username)
@@ -342,8 +415,8 @@ def profile_get(request: Request):
 
 @app.post('/profile')
 def profile_post(request: Request, email: Optional[str] = Form(None), phone: Optional[str] = Form(None), family_members: Optional[str] = Form(None), insurance_companies: Optional[str] = Form(None)):
-    username = request.cookies.get('username')
-    if not username:
+    user_id, username = get_verified_cookies(request)
+    if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
     # Update user profile
@@ -367,8 +440,7 @@ def profile_post(request: Request, email: Optional[str] = Form(None), phone: Opt
 @app.post('/upload')
 async def upload_receipt(request: Request, name: str = Form(...), date: Optional[str] = Form(None), image: UploadFile = File(...)):
     # require a logged-in user
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return templates.TemplateResponse('login.html', {"request": request, "message": "Please log in before uploading."})
     
@@ -376,6 +448,11 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
 
     if not name:
         return JSONResponse({"error": "name is required"}, status_code=422)
+    
+    # Get user email and phone from database
+    user_data = get_user_db(username)
+    user_email = user_data.get('email', '') if user_data else ''
+    user_phone = user_data.get('phone', '') if user_data else ''
 
     # Normalize date
     try:
@@ -441,6 +518,10 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
         f"refund_stage={_safe(refund_stage)}",
         f"refund_details={_safe(refund_details[:100])}"
     ]
+    if user_email:
+        ctx_parts.append(f"email={_safe(user_email)}")
+    if user_phone:
+        ctx_parts.append(f"phone={_safe(user_phone)}")
     if sent_to_insurance:
         ctx_parts.append(f"sent_to_insurance={_safe(sent_to_insurance)}")
     if insurance_company:
@@ -465,8 +546,9 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
             resource_type='image',
             context=context_str
         )
+        logger.info(f'Image uploaded successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
-        print('Upload failed:', e)
+        logger.error(f'Upload failed for user {username} (id={user_id}): {e}')
         # stay on UI and show error message
         msg = f"Upload failed: {e}"
         try:
@@ -515,8 +597,7 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
 @app.get('/search')
 def search(request: Request, name: Optional[str] = None, date: Optional[str] = None, refunded: Optional[str] = None, sent_to_insurance: Optional[str] = None, insurance_company: Optional[str] = None):
     """Search uploaded images by name, date and metadata using Cloudinary Search API."""
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
@@ -580,8 +661,7 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
 @app.post('/update')
 def update_metadata(request: Request, public_id: str = Form(...), refunded: Optional[str] = Form(None), sent_to_insurance: Optional[str] = Form(None), insurance_company: Optional[str] = Form(None)):
     """Update metadata (context) for an existing image."""
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
@@ -653,8 +733,7 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
 @app.post('/delete')
 def delete_image(request: Request, public_id: str = Form(...)):
     """Delete an image by its Cloudinary public_id."""
-    user_id = request.cookies.get('user_id')
-    username = request.cookies.get('username')
+    user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
@@ -666,11 +745,14 @@ def delete_image(request: Request, public_id: str = Form(...)):
     # Verify user owns this receipt
     db_rec = get_receipt_db(public_id)
     if not db_rec or db_rec.get('user_id') != user_id:
+        logger.warning(f'Unauthorized delete attempt: public_id={public_id}, user_id={user_id}, username={username}')
         return JSONResponse({"error": "Access denied"}, status_code=403)
     
     try:
         res = cloudinary.uploader.destroy(public_id, resource_type='image')
+        logger.info(f'Image deleted successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
+        logger.error(f'Delete failed for {public_id} by user {username} (id={user_id}): {e}')
         return templates.TemplateResponse('index.html', {"request": request, "message": f"Delete failed: {e}", "results": [], "username": username})
 
     result_flag = res.get('result')
