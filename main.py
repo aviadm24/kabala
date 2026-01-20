@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi import FastAPI, UploadFile, File, Form, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -14,147 +14,19 @@ import sqlite3
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import logging
 from logging.handlers import RotatingFileHandler
-
-# SQLite DB
-DB_PATH = os.path.join(os.path.dirname(__file__), 'receipts.db')
-
-
-def get_conn():
-    return sqlite3.connect(DB_PATH)
-
-
-def ensure_db():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        phone TEXT,
-        email TEXT,
-        family_members TEXT,
-        insurance_companies TEXT,
-        created_at TEXT
-    )
-    ''')
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS receipts (
-        public_id TEXT PRIMARY KEY,
-        user_id INTEGER,
-        username TEXT,
-        name TEXT,
-        date TEXT,
-        sent_to_insurance TEXT,
-        refund_details TEXT,
-        insurance_company TEXT,
-        account_username TEXT,
-        family_count INTEGER,
-        family_names TEXT,
-        how_work TEXT,
-        secure_url TEXT,
-        created_at TEXT,
-        FOREIGN KEY(user_id) REFERENCES users(user_id)
-    )
-    ''')
-    conn.commit()
-    conn.close()
-
-
-def insert_receipt(rec: dict):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''INSERT OR REPLACE INTO receipts(public_id, user_id, username, name, date, sent_to_insurance, refund_details, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
-        rec.get('public_id'), rec.get('user_id'), rec.get('username'), rec.get('name'), rec.get('date'), rec.get('sent_to_insurance'), rec.get('refund_details'), rec.get('insurance_company'), rec.get('account_username'), rec.get('family_count'), rec.get('family_names'), rec.get('how_work'), rec.get('secure_url'), rec.get('created_at')
-    ))
-    conn.commit()
-    conn.close()
-
-
-def update_receipt_db(public_id: str, fields: dict):
-    if not fields:
-        return
-    keys = list(fields.keys())
-    vals = [fields[k] for k in keys]
-    set_clause = ','.join([f"{k}=?" for k in keys])
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(f"UPDATE receipts SET {set_clause} WHERE public_id=?", vals + [public_id])
-    conn.commit()
-    conn.close()
-
-
-def delete_receipt_db(public_id: str):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM receipts WHERE public_id=?", (public_id,))
-    conn.commit()
-    conn.close()
-
-
-def get_receipt_db(public_id: str):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT public_id, user_id, username, name, date, sent_to_insurance, refund_details, insurance_company, account_username, family_count, family_names, how_work, secure_url, created_at FROM receipts WHERE public_id=?", (public_id,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return None
-    cols = ['public_id', 'user_id', 'username', 'name', 'date', 'sent_to_insurance', 'refund_details', 'insurance_company', 'account_username', 'family_count', 'family_names', 'how_work', 'secure_url', 'created_at']
-    return dict(zip(cols, row))
-
-
-def insert_user(username: str, phone: str, email: str, family_members: str, insurance_companies: str):
-    conn = get_conn()
-    cur = conn.cursor()
-    created_at = datetime.utcnow().isoformat()
-    cur.execute('''INSERT OR REPLACE INTO users(username, phone, email, family_members, insurance_companies, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)''', (username, phone, email, family_members, insurance_companies, created_at))
-    conn.commit()
-    conn.close()
-
-
-def get_user_db(username: str):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT user_id, username, phone, email, family_members, insurance_companies, created_at FROM users WHERE username=?", (username,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return None
-    cols = ['user_id', 'username', 'phone', 'email', 'family_members', 'insurance_companies', 'created_at']
-    return dict(zip(cols, row))
-
-
-def get_user_by_id(user_id: int):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT user_id, username, phone, email, family_members, insurance_companies, created_at FROM users WHERE user_id=?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return None
-    cols = ['user_id', 'username', 'phone', 'email', 'family_members', 'insurance_companies', 'created_at']
-    return dict(zip(cols, row))
-
-
-def update_user_db(username: str, fields: dict):
-    if not fields:
-        return
-    keys = list(fields.keys())
-    vals = [fields[k] for k in keys]
-    set_clause = ','.join([f"{k}=?" for k in keys])
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(f"UPDATE users SET {set_clause} WHERE username=?", vals + [username])
-    conn.commit()
-    conn.close()
-
-
-# ensure DB exists on startup
-ensure_db()
+from models import User, Receipt
+from datetime import datetime
+from init_db import ensure_db
+from depts import get_db
+from database import SessionLocal
+# Load environment variables from .env if present
+load_dotenv()
 
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
+
+@app.on_event("startup")
+def startup():
+    ensure_db()
 
 # Configure logging
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
@@ -191,8 +63,7 @@ logger.info('Application started')
 # Templates
 templates = Jinja2Templates(directory="templates")
 
-# Load environment variables from .env if present
-load_dotenv()
+
 
 # Cloudinary configuration
 cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
@@ -284,10 +155,10 @@ def ui(request: Request):
     family_members = []
     insurance_companies = []
     if user_data:
-        if user_data.get('family_members'):
-            family_members = [x.strip() for x in user_data['family_members'].split(',') if x.strip()]
-        if user_data.get('insurance_companies'):
-            insurance_companies = [x.strip() for x in user_data['insurance_companies'].split(',') if x.strip()]
+        if user_data.family_members:
+            family_members = [x.strip() for x in user_data.family_members.split(',') if x.strip()]
+        if user_data.insurance_companies:
+            insurance_companies = [x.strip() for x in user_data.insurance_companies.split(',') if x.strip()]
     
     return templates.TemplateResponse('index.html', {"request": request, "count": count, "username": username, "family_members": family_members, "insurance_companies": insurance_companies})
 
@@ -322,7 +193,7 @@ def signup_get(request: Request):
 
 
 @app.post('/signup')
-def signup_post(request: Request, username: str = Form(...), phone: Optional[str] = Form(None), email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), insurance_companies: Optional[str] = Form(None)):
+def signup_post(request: Request, username: str = Form(...), phone: Optional[str] = Form(None), email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), insurance_companies: Optional[str] = Form(None), db=Depends(get_db)):
     if not username:
         logger.warning('Signup attempt without username')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username is required"})
@@ -333,15 +204,15 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
         logger.warning(f'Signup attempt with existing username: {username}')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username already exists. Please try another or sign in."})
     
-    try:
-        insert_user(username, phone or '', email or '', family_members or '', insurance_companies or '')
-        # Get the new user's ID
-        user_data = get_user_db(username)
-        user_id = user_data.get('user_id')
-        logger.info(f'User signup successful: username={username}, user_id={user_id}')
-    except Exception as e:
-        logger.error(f'Sign up failed for {username}: {e}')
-        return templates.TemplateResponse('signup.html', {"request": request, "message": f"Sign up failed: {e}"})
+    # try:
+    insert_user(db, username, phone or '', email or '', family_members or '', insurance_companies or '')
+        # Get the new use's ID
+    user_data = get_user_db(username)
+    user_id = user_data.get('user_id')
+    logger.info(f'User signup successful: username={username}, user_id={user_id}')
+    # except Exception as e:
+    #     logger.error(f'Sign up failed for {username}: {e}')
+    #     return templates.TemplateResponse('signup.html', {"request": request, "message": f"Sign up failed: {e}"})
     
     # auto login
     resp = RedirectResponse(url='/', status_code=302)
@@ -357,7 +228,7 @@ def login_post(request: Request, username: str = Form(...)):
         logger.warning(f'Login attempt with non-existent username: {username}')
         return templates.TemplateResponse('login.html', {"request": request, "message": "Username not found"})
     
-    user_id = user_data.get('user_id')
+    user_id = user_data.user_id
     logger.info(f'User login successful: username={username}, user_id={user_id}')
     resp = RedirectResponse(url='/', status_code=302)
     resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=True, samesite='lax')
@@ -399,12 +270,12 @@ def profile_get(request: Request):
     resp = templates.TemplateResponse('profile.html', {
         "request": request,
         "username": username,
-        "email": user_data.get('email', ''),
-        "phone": user_data.get('phone', ''),
+        "email": user_data.email,
+        "phone": user_data.phone,
         "family_members": family_members,
         "insurance_companies": insurance_companies,
-        "family_members_str": user_data.get('family_members', ''),
-        "insurance_companies_str": user_data.get('insurance_companies', ''),
+        "family_members_str": user_data.family_members,
+        "insurance_companies_str": user_data.insurance_companies,
         "message": message
     })
     
@@ -451,8 +322,8 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
     
     # Get user email and phone from database
     user_data = get_user_db(username)
-    user_email = user_data.get('email', '') if user_data else ''
-    user_phone = user_data.get('phone', '') if user_data else ''
+    user_email = user_data.email if user_data else ''
+    user_phone = user_data.phone if user_data else ''
 
     # Normalize date
     try:
@@ -769,3 +640,81 @@ def delete_image(request: Request, public_id: str = Form(...)):
 
     return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "username": username})
 
+
+
+def insert_user(db, username, phone, email, family_members, insurance_companies):
+    user = db.query(User).filter(User.username == username).first()
+
+    if user:
+        user.phone = phone
+        user.email = email
+        user.family_members = family_members
+        user.insurance_companies = insurance_companies
+    else:
+        user = User(
+            username=username,
+            phone=phone,
+            email=email,
+            family_members=family_members,
+            insurance_companies=insurance_companies,
+            created_at=datetime.utcnow().isoformat()
+        )
+        db.add(user)
+
+    db.commit()
+    return user
+
+def get_user_db(username):
+    db = SessionLocal()
+    return db.query(User).filter(User.username == username).first()
+
+def get_user_by_id(db, user_id):
+    return db.query(User).filter(User.user_id == user_id).first()
+
+def insert_receipt(db, rec: dict):
+    receipt = db.query(Receipt).filter(
+        Receipt.public_id == rec["public_id"]
+    ).first()
+
+    if receipt:
+        for k, v in rec.items():
+            setattr(receipt, k, v)
+    else:
+        receipt = Receipt(**rec)
+        db.add(receipt)
+
+    db.commit()
+    return receipt
+
+def update_receipt_db(db, public_id: str, fields: dict):
+    receipt = db.query(Receipt).filter(
+        Receipt.public_id == public_id
+    ).first()
+
+    if not receipt:
+        return None
+
+    for k, v in fields.items():
+        setattr(receipt, k, v)
+
+    db.commit()
+    return receipt
+
+def delete_receipt_db(db, public_id: str):
+    receipt = db.query(Receipt).filter(
+        Receipt.public_id == public_id
+    ).first()
+
+    if receipt:
+        db.delete(receipt)
+        db.commit()
+
+def get_receipt_db(db, public_id: str):
+    return db.query(Receipt).filter(
+        Receipt.public_id == public_id
+    ).first()
+
+
+@app.post("/users")
+def create_user(username: str, db=Depends(get_db)):
+    return insert_user(db, username, None, None, None, None)
