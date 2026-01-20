@@ -208,7 +208,7 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     insert_user(db, username, phone or '', email or '', family_members or '', insurance_companies or '')
         # Get the new use's ID
     user_data = get_user_db(username)
-    user_id = user_data.get('user_id')
+    user_id = user_data.user_id
     logger.info(f'User signup successful: username={username}, user_id={user_id}')
     # except Exception as e:
     #     logger.error(f'Sign up failed for {username}: {e}')
