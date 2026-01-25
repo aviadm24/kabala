@@ -18,14 +18,31 @@ from models import User, Receipt
 from datetime import datetime
 from init_db import ensure_db
 from depts import get_db
-from database import SessionLocal
+from database import SessionLocal, engine
 # Load environment variables from .env if present
 load_dotenv()
+from pathlib import Path
+
+from admin.views import setup_admin
+
+
+def setup_google_credentials():
+    creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    if not creds_json:
+        return
+
+    creds_path = Path("/tmp/google-creds.json")
+    creds_path.write_text(creds_json)
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(creds_path)
+
+setup_google_credentials()
 
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 
 @app.on_event("startup")
 def startup():
+    setup_admin(app, engine)
     ensure_db()
 
 # Configure logging
@@ -259,10 +276,10 @@ def profile_get(request: Request):
     # Parse lists
     family_members = []
     insurance_companies = []
-    if user_data.get('family_members'):
-        family_members = [x.strip() for x in user_data['family_members'].split(',') if x.strip()]
-    if user_data.get('insurance_companies'):
-        insurance_companies = [x.strip() for x in user_data['insurance_companies'].split(',') if x.strip()]
+    if user_data.family_members:
+        family_members = [x.strip() for x in user_data.family_members.split(',') if x.strip()]
+    if user_data.insurance_companies:
+        insurance_companies = [x.strip() for x in user_data.insurance_companies.split(',') if x.strip()]
     
     # Get message from cookie if exists
     message = request.cookies.get('profile_message', '')
@@ -292,7 +309,8 @@ def profile_post(request: Request, email: Optional[str] = Form(None), phone: Opt
     
     # Update user profile
     try:
-        update_user_db(username, {
+        db = SessionLocal()
+        update_user_db(db, username, {
             'email': email or '',
             'phone': phone or '',
             'family_members': family_members or '',
@@ -455,7 +473,8 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
         'created_at': result.get('created_at')
     }
     try:
-        insert_receipt(rec)
+        db = SessionLocal()
+        insert_receipt(db, rec)
     except Exception:
         pass
 
@@ -520,10 +539,11 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
 
     # enrich results with DB metadata if available
     enriched = []
+    db = SessionLocal()
     for r in resources:
-        db = get_receipt_db(r.get('public_id'))
-        if db:
-            r['_db'] = db
+        receipt = get_receipt_db(db, r.get('public_id'))
+        if receipt:
+            r['_db'] = receipt
         enriched.append(r)
 
     return templates.TemplateResponse('index.html', {"request": request, "results": enriched, "name": name, "date": date, "refunded": refunded, "sent_to_insurance": sent_to_insurance, "insurance_company": insurance_company, "username": username})
@@ -542,7 +562,8 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
         return RedirectResponse(url='/login', status_code=302)
     
     # Verify user owns this receipt
-    db_rec = get_receipt_db(public_id)
+    db = SessionLocal()
+    db_rec = get_receipt_db(db, public_id)
     if not db_rec or db_rec.get('user_id') != user_id:
         return JSONResponse({"error": "Access denied"}, status_code=403)
     
@@ -587,7 +608,7 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
             'refund_details': refund_details,
             'insurance_company': insurance_val
         }
-        update_receipt_db(public_id, update_fields)
+        update_receipt_db(db, public_id, update_fields)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -614,7 +635,8 @@ def delete_image(request: Request, public_id: str = Form(...)):
         return RedirectResponse(url='/login', status_code=302)
     
     # Verify user owns this receipt
-    db_rec = get_receipt_db(public_id)
+    db = SessionLocal()
+    db_rec = get_receipt_db(db, public_id)
     if not db_rec or db_rec.get('user_id') != user_id:
         logger.warning(f'Unauthorized delete attempt: public_id={public_id}, user_id={user_id}, username={username}')
         return JSONResponse({"error": "Access denied"}, status_code=403)
@@ -634,7 +656,7 @@ def delete_image(request: Request, public_id: str = Form(...)):
 
     # remove from sqlite as well
     try:
-        delete_receipt_db(public_id)
+        delete_receipt_db(db, public_id)
     except Exception:
         pass
 
