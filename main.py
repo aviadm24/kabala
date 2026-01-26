@@ -316,13 +316,13 @@ def profile_post(request: Request, email: Optional[str] = Form(None), phone: Opt
             'family_members': family_members or '',
             'insurance_companies': insurance_companies or ''
         })
-        message = "✓ Profile updated successfully!"
+        message = "Profile updated successfully!"
     except Exception as e:
         message = f"Error updating profile: {e}"
     
     # Redirect back to profile page with message
     resp = RedirectResponse(url='/profile', status_code=302)
-    resp.set_cookie('profile_message', message, httponly=True)
+    resp.set_cookie('profile_message', message, httponly=True, )
     return resp
 
 
@@ -736,6 +736,19 @@ def get_receipt_db(db, public_id: str):
         Receipt.public_id == public_id
     ).first()
 
+def update_user_db(db, username: str, fields: dict):
+    user = db.query(User).filter(
+        User.username == username
+    ).first()
+
+    if not user:
+        return None
+
+    for k, v in fields.items():
+        setattr(user, k, v)
+
+    db.commit()
+    return user
 
 @app.post("/users")
 def create_user(username: str, db=Depends(get_db)):
