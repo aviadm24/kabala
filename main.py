@@ -24,7 +24,7 @@ load_dotenv()
 from pathlib import Path
 
 from admin.views import setup_admin
-
+from api.ocr import router as ocr_router
 
 def setup_google_credentials():
     creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
@@ -39,6 +39,7 @@ def setup_google_credentials():
 setup_google_credentials()
 
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
+app.include_router(ocr_router, prefix="/api/ocr")
 
 @app.on_event("startup")
 def startup():
@@ -326,8 +327,31 @@ def profile_post(request: Request, email: Optional[str] = Form(None), phone: Opt
     return resp
 
 
+def run_ocr_on_image(image: UploadFile) -> dict:
+    from google.cloud import vision
+
+    client = vision.ImageAnnotatorClient()
+
+    content = image.file.read()
+    image = vision.Image(content=content)
+
+    response = client.text_detection(image=image)
+
+    if not response.text_annotations:
+        return {"text": ""}
+
+    return {
+        "text": response.text_annotations[0].description
+    }
+
+
+
 @app.post('/upload')
-async def upload_receipt(request: Request, name: str = Form(...), date: Optional[str] = Form(None), image: UploadFile = File(...)):
+async def upload_receipt(request: Request, 
+                         name: str = Form(...), 
+                         date: Optional[str] = Form(None), 
+                         image: UploadFile = File(...),
+                         action: str = Form("save"),):
     # require a logged-in user
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
@@ -435,6 +459,28 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
             resource_type='image',
             context=context_str
         )
+
+        ocr_result = None
+
+        if action == "ocr":
+            try:
+                # IMPORTANT: rewind file, Cloudinary already consumed it
+                await image.seek(0)
+
+                # Call your OCR logic (Vision / LangGraph)
+                ocr_result = run_ocr_on_image(image)
+
+                logger.info(
+                    f"OCR completed for user={username}, public_id={public_id}"
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"OCR failed for user={username}, public_id={public_id}: {e}"
+                )
+                ocr_result = {"error": str(e)}
+
+
         logger.info(f'Image uploaded successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
         logger.error(f'Upload failed for user {username} (id={user_id}): {e}')
@@ -481,7 +527,15 @@ async def upload_receipt(request: Request, name: str = Form(...), date: Optional
     # attach db copy to result so template can show values
     result['_db'] = rec
 
-    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [result], "name": name, "date": date_str, "count": count, "username": username})
+    return templates.TemplateResponse('index.html', 
+                                      {"request": request, 
+                                       "message": msg, 
+                                       "results": [result], 
+                                       "name": name, 
+                                       "date": date_str, 
+                                       "count": count, 
+                                       "username": username,
+                                       "ocr": ocr_result, })
 
 
 @app.get('/search')

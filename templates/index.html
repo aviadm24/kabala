@@ -634,10 +634,24 @@
             </div>
 
             <input type="hidden" name="account_username" value="{{ username or '' }}" />
-            <button type="submit" class="btn-primary">💾 Upload Receipt</button>
+            <!-- <button type="submit" class="btn-primary">💾 Upload Receipt</button> -->
+            <div style="display: flex; gap: 12px;">
+              <button type="submit" name="action" value="save" class="btn-primary">
+                💾 Upload Receipt
+              </button>
+
+              <button type="submit" name="action" value="ocr" class="btn-secondary">
+                🔍 Run OCR
+              </button>
+            </div>
           </form>
         </div>
-
+        {% if ocr %}
+          <div class="section">
+            <div class="section-title">🔍 OCR Result</div>
+            <pre>{{ ocr.text }}</pre>
+          </div>
+        {% endif %}
         <div class="section">
           <div class="section-title">🔍 Search & Filter</div>
           <form method="get" action="/search">
