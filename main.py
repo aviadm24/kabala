@@ -146,7 +146,8 @@ def health_check():
 
 
 @app.get('/')
-def ui(request: Request):
+def ui(request: Request,
+       db=Depends(get_db)):
     user_id, username = get_verified_cookies(request)
     
     # get current count of images in Cloudinary uploads folder for this user
@@ -167,7 +168,7 @@ def ui(request: Request):
     else:
         count = 0
 
-    user_data = get_user_db(username) if username else None
+    user_data = get_user_db(db, username) if username else None
     
     # parse user data lists into arrays
     family_members = []
@@ -211,13 +212,16 @@ def signup_get(request: Request):
 
 
 @app.post('/signup')
-def signup_post(request: Request, username: str = Form(...), phone: Optional[str] = Form(None), email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), insurance_companies: Optional[str] = Form(None), db=Depends(get_db)):
+def signup_post(request: Request, username: str = Form(...), phone: Optional[str] = Form(None), 
+                email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), 
+                insurance_companies: Optional[str] = Form(None), 
+                db=Depends(get_db)):
     if not username:
         logger.warning('Signup attempt without username')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username is required"})
     
     # check if user already exists
-    existing = get_user_db(username)
+    existing = get_user_db(db, username)
     if existing:
         logger.warning(f'Signup attempt with existing username: {username}')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username already exists. Please try another or sign in."})
@@ -225,7 +229,7 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     # try:
     insert_user(db, username, phone or '', email or '', family_members or '', insurance_companies or '')
         # Get the new use's ID
-    user_data = get_user_db(username)
+    user_data = get_user_db(db, username)
     user_id = user_data.user_id
     logger.info(f'User signup successful: username={username}, user_id={user_id}')
     # except Exception as e:
@@ -240,8 +244,9 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
 
 
 @app.post('/login')
-def login_post(request: Request, username: str = Form(...)):
-    user_data = get_user_db(username)
+def login_post(request: Request, username: str = Form(...), 
+               db=Depends(get_db)):
+    user_data = get_user_db(db, username)
     if not user_data:
         logger.warning(f'Login attempt with non-existent username: {username}')
         return templates.TemplateResponse('login.html', {"request": request, "message": "Username not found"})
@@ -265,12 +270,13 @@ def logout(request: Request):
 
 
 @app.get('/profile')
-def profile_get(request: Request):
+def profile_get(request: Request,
+                db=Depends(get_db)):
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
-    user_data = get_user_db(username)
+    user_data = get_user_db(db, username)
     if not user_data:
         return templates.TemplateResponse('profile.html', {"request": request, "message": "User not found"})
     
@@ -351,7 +357,8 @@ async def upload_receipt(request: Request,
                          name: str = Form(...), 
                          date: Optional[str] = Form(None), 
                          image: UploadFile = File(...),
-                         action: str = Form("save"),):
+                         action: str = Form("save"),
+                         db = Depends(get_db)):
     # require a logged-in user
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
@@ -363,7 +370,7 @@ async def upload_receipt(request: Request,
         return JSONResponse({"error": "name is required"}, status_code=422)
     
     # Get user email and phone from database
-    user_data = get_user_db(username)
+    user_data = get_user_db(db, username)
     user_email = user_data.email if user_data else ''
     user_phone = user_data.phone if user_data else ''
 
@@ -733,15 +740,13 @@ def insert_user(db, username, phone, email, family_members, insurance_companies)
             email=email,
             family_members=family_members,
             insurance_companies=insurance_companies,
-            created_at=datetime.utcnow().isoformat()
+            created_at=datetime.utcnow()
         )
         db.add(user)
 
-    db.commit()
     return user
 
-def get_user_db(username):
-    db = SessionLocal()
+def get_user_db(db, username):
     return db.query(User).filter(User.username == username).first()
 
 def get_user_by_id(db, user_id):
