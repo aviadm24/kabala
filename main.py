@@ -254,8 +254,8 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     
     # auto login
     resp = RedirectResponse(url='/', status_code=302)
-    resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=True, samesite='lax')
-    resp.set_cookie('username', sign_cookie_value(username), httponly=True, secure=True, samesite='lax')
+    resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=False, samesite='lax')
+    resp.set_cookie('username', sign_cookie_value(username), httponly=True, secure=False, samesite='lax')
     logger.info("Signup completed, returning response")
     return resp
 
