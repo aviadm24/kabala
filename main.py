@@ -38,6 +38,15 @@ def setup_google_credentials():
 
 setup_google_credentials()
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+
+
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 app.include_router(ocr_router, prefix="/api/ocr")
 
@@ -221,15 +230,22 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username is required"})
     
     # check if user already exists
+    logger.info("Checking if user exists")
     existing = get_user_db(db, username)
+    logger.info(f"Existing user lookup result: {existing}")
     if existing:
         logger.warning(f'Signup attempt with existing username: {username}')
         return templates.TemplateResponse('signup.html', {"request": request, "message": "Username already exists. Please try another or sign in."})
     
     # try:
     insert_user(db, username, phone or '', email or '', family_members or '', insurance_companies or '')
+    db.flush()
+    logger.info("Session flushed")
         # Get the new use's ID
+    logger.info("Fetching user after insert")
     user_data = get_user_db(db, username)
+    logger.info(f"Fetched user after insert: {user_data}")
+
     user_id = user_data.user_id
     logger.info(f'User signup successful: username={username}, user_id={user_id}')
     # except Exception as e:
@@ -240,6 +256,7 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     resp = RedirectResponse(url='/', status_code=302)
     resp.set_cookie('user_id', sign_cookie_value(str(user_id)), httponly=True, secure=True, samesite='lax')
     resp.set_cookie('username', sign_cookie_value(username), httponly=True, secure=True, samesite='lax')
+    logger.info("Signup completed, returning response")
     return resp
 
 
@@ -726,6 +743,7 @@ def delete_image(request: Request, public_id: str = Form(...)):
 
 
 def insert_user(db, username, phone, email, family_members, insurance_companies):
+    logger.info(f"Inserting user: {username}")
     user = db.query(User).filter(User.username == username).first()
 
     if user:
@@ -743,6 +761,7 @@ def insert_user(db, username, phone, email, family_members, insurance_companies)
             created_at=datetime.utcnow()
         )
         db.add(user)
+        logger.info("User added to session")
 
     return user
 
