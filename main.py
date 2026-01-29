@@ -50,6 +50,8 @@ logging.basicConfig(
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 app.include_router(ocr_router, prefix="/api/ocr")
 
+
+
 @app.on_event("startup")
 def startup():
     setup_admin(app, engine)
@@ -86,6 +88,13 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 logger.info('Application started')
+
+from sqlalchemy import text
+
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT current_database(), current_schema(), inet_server_addr()"))
+    logger.info(f"DB IDENTITY: {result.fetchone()}")
+
 
 # Templates
 templates = Jinja2Templates(directory="templates")
