@@ -3,11 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
 
-ENV = os.getenv("ENV", "local")
 
+ENV = os.getenv("ENV")
+print(f"Database environment: {ENV}")
 if ENV == "local":
+    load_dotenv()
     DATABASE_URL = "sqlite:///./app.db"
     engine = create_engine(
         DATABASE_URL,

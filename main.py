@@ -19,12 +19,11 @@ from datetime import datetime
 from init_db import ensure_db
 from depts import get_db
 from database import SessionLocal, engine
-# Load environment variables from .env if present
-load_dotenv()
 from pathlib import Path
 
 from admin.views import setup_admin
 from api.ocr import router as ocr_router
+
 
 def setup_google_credentials():
     creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
@@ -63,6 +62,12 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 logger = logging.getLogger('kabala')
 logger.setLevel(logging.DEBUG)
+logger.info(f"DB DIALECT = {engine.dialect.name}")
+if engine.dialect.name != 'sqlite':
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT current_database(), current_schema(), inet_server_addr()"))
+        logger.info(f"DB IDENTITY: {result.fetchone()}")
 
 # File handler with rotation
 file_handler = RotatingFileHandler(
@@ -88,13 +93,6 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 logger.info('Application started')
-
-from sqlalchemy import text
-
-with engine.connect() as conn:
-    result = conn.execute(text("SELECT current_database(), current_schema(), inet_server_addr()"))
-    logger.info(f"DB IDENTITY: {result.fetchone()}")
-
 
 # Templates
 templates = Jinja2Templates(directory="templates")
