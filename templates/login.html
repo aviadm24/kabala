@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ReimbursementTracker - Sign In</title>
+    <title>{{ _("ReimbursementTracker - Sign In") }}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -119,9 +119,39 @@
       .auth-footer a:hover {
         color: #1e3c72;
       }
+      .lang-switcher-login {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 8px;
+      }
+      .lang-switcher-login a {
+        color: white;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+      .lang-switcher-login a:hover {
+        background: rgba(255,255,255,0.2);
+      }
+      .lang-switcher-login a.active {
+        background: rgba(255,255,255,0.3);
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
+    <!-- Language Switcher -->
+    <div class="lang-switcher-login">
+      <a href="{{ request.url.path | add_lang('en') }}" class="{% if lang == 'en' %}active{% endif %}" title="English">🇬🇧 EN</a>
+      <a href="{{ request.url.path | add_lang('he') }}" class="{% if lang == 'he' %}active{% endif %}" title="עברית">🇮🇱 HE</a>
+    </div>
+    
     <div class="auth-container">
       <div class="logo-section">
         <div class="logo-icon">📋</div>
@@ -132,7 +162,7 @@
       </div>
 
       <h2>Welcome back</h2>
-      <p class="subtitle">Sign in to manage your insurance claims</p>
+      <p class="subtitle">{{ _("Sign in to manage your insurance claims") }}</p>
 
       {% if message %}
         <div class="error-message">{{ message }}</div>
@@ -140,14 +170,14 @@
 
       <form method="post" action="/login">
         <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" required placeholder="Enter your username" />
+          <label for="username">{{ _("Username") }}</label>
+          <input type="text" id="username" name="username" required placeholder="{{ _('Enter your username') }}" />
         </div>
-        <button type="submit">Sign In</button>
+        <button type="submit">{{ _("Sign In") }}</button>
       </form>
 
       <div class="auth-footer">
-        Don't have an account? <a href="/signup">Create one</a>
+        Don't have an account? <a href="/signup">{{ _("Create one") }}</a>
       </div>
     </div>
   </body>

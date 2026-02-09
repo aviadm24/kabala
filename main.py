@@ -23,6 +23,7 @@ from pathlib import Path
 
 from admin.views import setup_admin
 from api.ocr import router as ocr_router
+from i18n import get_best_locale_from_headers, get_translator, DEFAULT_LOCALE
 
 
 def setup_google_credentials():
@@ -50,6 +51,29 @@ app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 app.include_router(ocr_router, prefix="/api/ocr")
 
 
+# Middleware to handle lang cookie
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class LanguageCookieMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Check if lang parameter in query string
+        lang_param = request.query_params.get('lang')
+        if lang_param and lang_param in ['en', 'he']:
+            # Set cookie for 365 days
+            response.set_cookie(
+                key='lang',
+                value=lang_param,
+                max_age=365*24*60*60,
+                httponly=True,
+                samesite='lax'
+            )
+        
+        return response
+
+app.add_middleware(LanguageCookieMiddleware)
 
 @app.on_event("startup")
 def startup():
@@ -94,8 +118,47 @@ logger.addHandler(console_handler)
 
 logger.info('Application started')
 
-# Templates
+# Templates with gettext extension enabled for i18n
 templates = Jinja2Templates(directory="templates")
+templates.env.add_extension('jinja2.ext.i18n')
+
+# Add filter to preserve lang parameter in URLs
+def url_with_lang(url: str, lang: str) -> str:
+    """Add or replace lang parameter in a URL."""
+    from urllib.parse import urlencode, parse_qs, urlparse, urlunparse
+    
+    # Handle both absolute and relative URLs
+    if url.startswith('http'):
+        parsed = urlparse(url)
+        path = parsed.path
+        if parsed.query:
+            query_dict = parse_qs(parsed.query, keep_blank_values=True)
+        else:
+            query_dict = {}
+    else:
+        # Relative URL
+        if '?' in url:
+            path, query_str = url.split('?', 1)
+            query_dict = parse_qs(query_str, keep_blank_values=True)
+        else:
+            path = url
+            query_dict = {}
+    
+    # Convert query_dict values from lists to single values
+    query_dict = {k: v[0] if isinstance(v, list) else v for k, v in query_dict.items()}
+    
+    # Update lang parameter
+    query_dict['lang'] = lang
+    
+    # Rebuild the query string
+    new_query = urlencode(query_dict)
+    
+    if url.startswith('http'):
+        return f"{path}?{new_query}" if new_query else path
+    else:
+        return f"{path}?{new_query}" if new_query else path
+
+templates.env.filters['add_lang'] = url_with_lang
 
 
 
@@ -156,14 +219,35 @@ def safe_public_id(name: str, date_str: str) -> str:
     return base[:200]
 
 
+def _determine_locale_from_request(request: Request) -> str:
+    """Determine user's preferred locale from request."""
+    # prefer query param, then cookie, then Accept-Language
+    q = request.query_params.get('lang') if request is not None else None
+    cookie_lang = request.cookies.get('lang') if request is not None else None
+    accept = request.headers.get('accept-language') if request is not None else None
+    return get_best_locale_from_headers(accept, cookie_lang, q)
+
+
+def _get_locale_and_translator(request: Request):
+    """Helper to get locale and translator for a request."""
+    locale = _determine_locale_from_request(request)
+    gettext_fn, ngettext_fn, _loc = get_translator(locale)
+    return locale, gettext_fn, ngettext_fn, _loc
+
+
 @app.get("/health", response_class=JSONResponse)
-def health_check():
-    return {"status": "ok", "message": "API running"}
+def health_check(request: Request):
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    return {"status": "ok", "message": gettext_fn("API running")}
 
 
 @app.get('/')
 def ui(request: Request,
        db=Depends(get_db)):
+    # determine locale and translator
+    locale = _determine_locale_from_request(request)
+    gettext_fn, ngettext_fn, _loc = get_translator(locale)
+
     user_id, username = get_verified_cookies(request)
     
     # get current count of images in Cloudinary uploads folder for this user
@@ -195,7 +279,17 @@ def ui(request: Request,
         if user_data.insurance_companies:
             insurance_companies = [x.strip() for x in user_data.insurance_companies.split(',') if x.strip()]
     
-    return templates.TemplateResponse('index.html', {"request": request, "count": count, "username": username, "family_members": family_members, "insurance_companies": insurance_companies})
+    context = {
+        "request": request,
+        "count": count,
+        "username": username,
+        "family_members": family_members,
+        "insurance_companies": insurance_companies,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    }
+    return templates.TemplateResponse('index.html', context)
 
 
 @app.get('/count')
@@ -219,12 +313,26 @@ def count_endpoint(request: Request):
 
 @app.get('/login')
 def login_get(request: Request):
-    return templates.TemplateResponse('login.html', {"request": request, "message": request.query_params.get('message','')})
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    return templates.TemplateResponse('login.html', {
+        "request": request,
+        "message": request.query_params.get('message', ''),
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
 
 
 @app.get('/signup')
 def signup_get(request: Request):
-    return templates.TemplateResponse('signup.html', {"request": request, "message": request.query_params.get('message','')})
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    return templates.TemplateResponse('signup.html', {
+        "request": request,
+        "message": request.query_params.get('message', ''),
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
 
 
 @app.post('/signup')
@@ -232,9 +340,17 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
                 email: Optional[str] = Form(None), family_members: Optional[str] = Form(None), 
                 insurance_companies: Optional[str] = Form(None), 
                 db=Depends(get_db)):
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     if not username:
         logger.warning('Signup attempt without username')
-        return templates.TemplateResponse('signup.html', {"request": request, "message": "Username is required"})
+        return templates.TemplateResponse('signup.html', {
+            "request": request,
+            "message": gettext_fn("Username is required"),
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
     
     # check if user already exists
     logger.info("Checking if user exists")
@@ -242,7 +358,13 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
     logger.info(f"Existing user lookup result: {existing}")
     if existing:
         logger.warning(f'Signup attempt with existing username: {username}')
-        return templates.TemplateResponse('signup.html', {"request": request, "message": "Username already exists. Please try another or sign in."})
+        return templates.TemplateResponse('signup.html', {
+            "request": request,
+            "message": gettext_fn("Username already exists. Please try another or sign in."),
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
     
     # try:
     insert_user(db, username, phone or '', email or '', family_members or '', insurance_companies or '')
@@ -270,10 +392,18 @@ def signup_post(request: Request, username: str = Form(...), phone: Optional[str
 @app.post('/login')
 def login_post(request: Request, username: str = Form(...), 
                db=Depends(get_db)):
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     user_data = get_user_db(db, username)
     if not user_data:
         logger.warning(f'Login attempt with non-existent username: {username}')
-        return templates.TemplateResponse('login.html', {"request": request, "message": "Username not found"})
+        return templates.TemplateResponse('login.html', {
+            "request": request,
+            "message": gettext_fn("Username not found"),
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
     
     user_id = user_data.user_id
     logger.info(f'User login successful: username={username}, user_id={user_id}')
@@ -296,13 +426,21 @@ def logout(request: Request):
 @app.get('/profile')
 def profile_get(request: Request,
                 db=Depends(get_db)):
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
     
     user_data = get_user_db(db, username)
     if not user_data:
-        return templates.TemplateResponse('profile.html', {"request": request, "message": "User not found"})
+        return templates.TemplateResponse('profile.html', {
+            "request": request,
+            "message": gettext_fn("User not found"),
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
     
     # Parse lists
     family_members = []
@@ -324,7 +462,10 @@ def profile_get(request: Request,
         "insurance_companies": insurance_companies,
         "family_members_str": user_data.family_members,
         "insurance_companies_str": user_data.insurance_companies,
-        "message": message
+        "message": message,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
     })
     
     # Clear message cookie
@@ -383,15 +524,23 @@ async def upload_receipt(request: Request,
                          file: UploadFile = File(...),
                          action: str = Form("save"),
                          db = Depends(get_db)):
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     # require a logged-in user
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
-        return templates.TemplateResponse('login.html', {"request": request, "message": "Please log in before uploading."})
+        return templates.TemplateResponse('login.html', {
+            "request": request,
+            "message": gettext_fn("Please log in before uploading."),
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
     
     user_id = int(user_id)
 
     if not name:
-        return JSONResponse({"error": "name is required"}, status_code=422)
+        return JSONResponse({"error": gettext_fn("name is required")}, status_code=422)
     
     # Get user email and phone from database
     user_data = get_user_db(db, username)
@@ -523,16 +672,27 @@ async def upload_receipt(request: Request,
     except Exception as e:
         logger.error(f'Upload failed for user {username} (id={user_id}): {e}')
         # stay on UI and show error message
-        msg = f"Upload failed: {e}"
+        msg = gettext_fn("Upload failed") + f": {e}"
         try:
             search_result = cloudinary.Search().expression(f"folder:uploads AND context.username:{username}").max_results(1).execute()
             count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
         except Exception:
             count = 0
-        return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "name": name, "date": date_str, "count": count, "username": username})
+        return templates.TemplateResponse('index.html', {
+            "request": request,
+            "message": msg,
+            "results": [],
+            "name": name,
+            "date": date_str,
+            "count": count,
+            "username": username,
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
 
     # Success: store metadata in SQLite and show index UI with success message
-    msg = f"Uploaded: {result.get('public_id', public_id)}"
+    msg = gettext_fn("Uploaded") + f": {result.get('public_id', public_id)}"
     try:
         search_result = cloudinary.Search().expression(f"folder:uploads AND context.username:{username}").max_results(1).execute()
         count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
@@ -573,12 +733,17 @@ async def upload_receipt(request: Request,
                                        "date": date_str, 
                                        "count": count, 
                                        "username": username,
-                                       "ocr": ocr_result, })
+                                       "ocr": ocr_result,
+                                       "_": gettext_fn,
+                                       "ngettext": ngettext_fn,
+                                       "lang": _loc, })
 
 
 @app.get('/search')
 def search(request: Request, name: Optional[str] = None, date: Optional[str] = None, refunded: Optional[str] = None, sent_to_insurance: Optional[str] = None, insurance_company: Optional[str] = None):
     """Search uploaded images by name, date and metadata using Cloudinary Search API."""
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
@@ -627,7 +792,15 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
         search_result = cloudinary.Search().expression(expr).max_results(100).execute()
         resources = search_result.get('resources', [])
     except Exception as e:
-        return templates.TemplateResponse('index.html', {"request": request, "message": f"Search failed: {e}", "results": [], "username": username})
+        return templates.TemplateResponse('index.html', {
+            "request": request,
+            "message": gettext_fn("Search failed") + f": {e}",
+            "results": [],
+            "username": username,
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
 
     # enrich results with DB metadata if available
     enriched = []
@@ -638,12 +811,26 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
             r['_db'] = receipt
         enriched.append(r)
 
-    return templates.TemplateResponse('index.html', {"request": request, "results": enriched, "name": name, "date": date, "refunded": refunded, "sent_to_insurance": sent_to_insurance, "insurance_company": insurance_company, "username": username})
+    return templates.TemplateResponse('index.html', {
+        "request": request,
+        "results": enriched,
+        "name": name,
+        "date": date,
+        "refunded": refunded,
+        "sent_to_insurance": sent_to_insurance,
+        "insurance_company": insurance_company,
+        "username": username,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
 
 
 @app.post('/update')
 def update_metadata(request: Request, public_id: str = Form(...), refunded: Optional[str] = Form(None), sent_to_insurance: Optional[str] = Form(None), insurance_company: Optional[str] = Form(None)):
     """Update metadata (context) for an existing image."""
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
@@ -657,7 +844,7 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
     db = SessionLocal()
     db_rec = get_receipt_db(db, public_id)
     if not db_rec or db_rec.get('user_id') != user_id:
-        return JSONResponse({"error": "Access denied"}, status_code=403)
+        return JSONResponse({"error": gettext_fn("Access denied")}, status_code=403)
     
     try:
         # Parse refund details from form (multiple refunds)
@@ -710,14 +897,25 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
     except Exception:
         res = None
 
-    msg = f"Updated metadata for {public_id}"
-    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [res] if res else [], "count": 0, "username": username})
+    msg = gettext_fn("Updated metadata for") + f" {public_id}"
+    return templates.TemplateResponse('index.html', {
+        "request": request,
+        "message": msg,
+        "results": [res] if res else [],
+        "count": 0,
+        "username": username,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
 
 
 @app.post('/delete')
 def delete_image(request: Request, public_id: str = Form(...),
                  db=Depends(get_db)):
     """Delete an image by its Cloudinary public_id."""
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
     user_id, username = get_verified_cookies(request)
     if not user_id or not username:
         return RedirectResponse(url='/login', status_code=302)
@@ -742,13 +940,21 @@ def delete_image(request: Request, public_id: str = Form(...),
         logger.info(f'Image deleted successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
         logger.error(f'Delete failed for {public_id} by user {username} (id={user_id}): {e}')
-        return templates.TemplateResponse('index.html', {"request": request, "message": f"Delete failed: {e}", "results": [], "username": username})
+        return templates.TemplateResponse('index.html', {
+            "request": request,
+            "message": gettext_fn("Delete failed") + f": {e}",
+            "results": [],
+            "username": username,
+            "_": gettext_fn,
+            "ngettext": ngettext_fn,
+            "lang": _loc,
+        })
 
     result_flag = res.get('result')
     if result_flag in ('ok', 'deleted'):
-        msg = f"Deleted {public_id}"
+        msg = gettext_fn("Deleted") + f" {public_id}"
     else:
-        msg = f"Delete returned: {result_flag}"
+        msg = gettext_fn("Delete returned") + f": {result_flag}"
 
     # remove from sqlite as well
     try:
@@ -756,7 +962,15 @@ def delete_image(request: Request, public_id: str = Form(...),
     except Exception:
         pass
 
-    return templates.TemplateResponse('index.html', {"request": request, "message": msg, "results": [], "username": username})
+    return templates.TemplateResponse('index.html', {
+        "request": request,
+        "message": msg,
+        "results": [],
+        "username": username,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
 
 
 

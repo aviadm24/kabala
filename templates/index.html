@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ReimbursementTracker - Dashboard</title>
+    <title>{{ _("ReimbursementTracker - Dashboard") }}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -73,6 +73,28 @@
       .logout-btn:hover {
         background: rgba(255,255,255,0.3);
         border-color: rgba(255,255,255,0.5);
+      }
+      .lang-switcher {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .lang-switcher a {
+        color: white;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+      .lang-switcher a:hover {
+        background: rgba(255,255,255,0.2);
+      }
+      .lang-switcher a.active {
+        background: rgba(255,255,255,0.3);
+        font-weight: 600;
       }
       .container {
         max-width: 1200px;
@@ -536,11 +558,16 @@
             {% endif %}
           </div>
           {% if username %}
-            <div style="display:flex;gap:12px;">
-              <a href="/profile" style="color:white;text-decoration:none;font-size:13px;padding:8px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">⚙️ Profile</a>
-              <a href="/logout" class="logout-btn">Logout</a>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <a href="/profile" style="color:white;text-decoration:none;font-size:13px;padding:8px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">⚙️ {{ _("Profile") }}</a>
+              <a href="/logout" class="logout-btn">{{ _("Logout") }}</a>
             </div>
           {% endif %}
+          <!-- Language Switcher -->
+          <div class="lang-switcher" style="margin-left:auto;">
+            <a href="{{ request.url.path | add_lang('en') }}" class="{% if lang == 'en' %}active{% endif %}" title="English">🇬🇧 EN</a>
+            <a href="{{ request.url.path | add_lang('he') }}" class="{% if lang == 'he' %}active{% endif %}" title="עברית">🇮🇱 HE</a>
+          </div>
         </div>
       </div>
     </div>
@@ -553,58 +580,58 @@
       <div class="stats-bar">
         <div class="stat-card">
           <div>
-            <div class="stat-label">📁 Receipts Stored</div>
+            <div class="stat-label">📁 {{ _("Receipts Stored") }}</div>
             <div class="stat-value" id="count-val">{{ count or 0 }}</div>
           </div>
-          <button id="refresh-count" class="stat-action">Refresh</button>
+          <button id="refresh-count" class="stat-action">{{ _("Refresh") }}</button>
         </div>
         <div class="stat-card">
           <div>
-            <div class="stat-label">✅ Status</div>
+            <div class="stat-label">✅ {{ _("Status") }}</div>
             <div class="stat-value" style="color:#27ae60;">Active</div>
           </div>
-          <div style="font-size:12px;color:#7a8a99;text-align:right;">Ready to track claims</div>
+          <div style="font-size:12px;color:#7a8a99;text-align:right;">{{ _("Ready to track claims") }}</div>
         </div>
       </div>
 
       {% if username %}
         <div class="section">
-          <div class="section-title">📸 Upload Receipt</div>
+          <div class="section-title">📸 {{ _("Upload Receipt") }}</div>
           <form method="post" action="/upload" enctype="multipart/form-data">
             <div class="form-grid">
               <div class="form-group">
-                <label for="name">Receipt Name *</label>
-                <input type="text" id="name" name="name" required placeholder="e.g., Doctor Visit - Jan 15" value="{{ name or '' }}" />
+                <label for="name">{{ _("Receipt Name") }} *</label>
+                <input type="text" id="name" name="name" required placeholder="{{ _('e.g., Doctor Visit - Jan 15') }}" value="{{ name or '' }}" />
               </div>
 
               <div class="form-group">
-                <label for="date">Date</label>
+                <label for="date">{{ _("Date") }}</label>
                 <input type="date" id="date" name="date" value="{{ date or '' }}" />
               </div>
 
               <div class="form-group" style="grid-column: span 2;">
-                <label for="file">Receipt File *</label>
+                <label for="file">{{ _("Receipt File") }} *</label>
                 <input type="file" id="file" name="file" required />
               </div>
             </div>
 
             <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
-              <div class="section-title" style="margin: 0 0 16px 0; font-size: 15px;">Claim Status</div>
+              <div class="section-title" style="margin: 0 0 16px 0; font-size: 15px;">{{ _("Claim Status") }}</div>
               <div class="form-grid">
                 <div class="checkbox-group">
                   <input type="checkbox" id="refunded" name="refunded" value="yes" />
-                  <label for="refunded">✓ Refunded</label>
+                  <label for="refunded">✓ {{ _("Refunded") }}</label>
                 </div>
 
                 <div class="checkbox-group">
                   <input type="checkbox" id="sent_to_insurance" name="sent_to_insurance" value="yes" />
-                  <label for="sent_to_insurance">📤 Sent to Insurance</label>
+                  <label for="sent_to_insurance">📤 {{ _("Sent to Insurance") }}</label>
                 </div>
 
                 <div class="form-group">
-                  <label for="insurance_company">Insurance Company</label>
+                  <label for="insurance_company">{{ _("Insurance Company") }}</label>
                   <select id="insurance_company" name="insurance_company">
-                    <option value="">-- Select Company --</option>
+                    <option value="">-- {{ _("Select Company") }} --</option>
                     {% for ic in insurance_companies %}
                       <option value="{{ ic }}">{{ ic }}</option>
                     {% endfor %}
@@ -612,14 +639,14 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="family_count">Family Members Count</label>
+                  <label for="family_count">{{ _("Family Members Count") }}</label>
                   <input type="number" id="family_count" name="family_count" min="0" placeholder="0" />
                 </div>
 
                 <div class="form-group">
-                  <label for="family_names">Family Members</label>
+                  <label for="family_names">{{ _("Family Members") }}</label>
                   <select id="family_names" name="family_names">
-                    <option value="">-- Select Member --</option>
+                    <option value="">-- {{ _("Select Member") }} --</option>
                     {% for fm in family_members %}
                       <option value="{{ fm }}">{{ fm }}</option>
                     {% endfor %}
@@ -627,8 +654,8 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="how_work">Notes</label>
-                  <input type="text" id="how_work" name="how_work" placeholder="Any additional notes..." />
+                  <label for="how_work">{{ _("Notes") }}</label>
+                  <input type="text" id="how_work" name="how_work" placeholder="{{ _('Any additional notes...') }}" />
                 </div>
               </div>
             </div>

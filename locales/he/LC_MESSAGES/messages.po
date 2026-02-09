@@ -1,0 +1,164 @@
+# Hebrew translations for ReimbursementTracker
+# Copyright (C) 2026 ReimbursementTracker Project
+# This file is distributed under the same license as the ReimbursementTracker package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ReimbursementTracker 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: he\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# API messages
+msgid "API running"
+msgstr "API פועל"
+
+# Auth messages
+msgid "Username is required"
+msgstr "שם משתמש נדרש"
+
+msgid "Username already exists. Please try another or sign in."
+msgstr "שם המשתמש כבר קיים. אנא נסה שם אחר או התחבר."
+
+msgid "Username not found"
+msgstr "שם המשתמש לא נמצא"
+
+msgid "User not found"
+msgstr "המשתמש לא נמצא"
+
+msgid "Access denied"
+msgstr "הגישה נדחתה"
+
+msgid "Please log in before uploading."
+msgstr "אנא התחבר לפני העלאה."
+
+# Upload messages
+msgid "name is required"
+msgstr "שם נדרש"
+
+msgid "Upload failed"
+msgstr "ההעלאה נכשלה"
+
+msgid "Uploaded"
+msgstr "הועלה"
+
+# Search messages
+msgid "Search failed"
+msgstr "החיפוש נכשל"
+
+# Update messages
+msgid "Updated metadata for"
+msgstr "הנתונים המטא עודכנו עבור"
+
+# Delete messages
+msgid "Delete failed"
+msgstr "המחיקה נכשלה"
+
+msgid "Deleted"
+msgstr "נמחק"
+
+msgid "Delete returned"
+msgstr "המחיקה חזרה"
+
+# UI Labels and Buttons (from templates)
+msgid "Sign in to manage your insurance claims"
+msgstr "התחבר לניהול תביעות הביטוח שלך"
+
+msgid "Username"
+msgstr "שם משתמש"
+
+msgid "Enter your username"
+msgstr "הזן את שם המשתמש שלך"
+
+msgid "Sign In"
+msgstr "התחברות"
+
+msgid "Get started managing your insurance claims"
+msgstr "התחל לנהל את תביעות הביטוח שלך"
+
+msgid "Create Account"
+msgstr "צור חשבון"
+
+msgid "Choose a username"
+msgstr "בחר שם משתמש"
+
+msgid "Email"
+msgstr "דואר אלקטרוני"
+
+msgid "your.email@example.com"
+msgstr "your.email@example.com"
+
+msgid "Phone"
+msgstr "טלפון"
+
+msgid "(555) 123-4567"
+msgstr "(555) 123-4567"
+
+msgid "Family members"
+msgstr "חברי משפחה"
+
+msgid "Separate names with commas"
+msgstr "הפרד שמות בפסיקים"
+
+msgid "Insurance companies"
+msgstr "חברות ביטוח"
+
+msgid "Separate with commas"
+msgstr "הפרד בפסיקים"
+
+msgid "ReimbursementTracker - Dashboard"
+msgstr "ReimbursementTracker - לוח בקרה"
+
+msgid "Receipts Stored"
+msgstr "קבלות מאוחסנות"
+
+msgid "Refresh"
+msgstr "רענן"
+
+msgid "Status"
+msgstr "סטטוס"
+
+msgid "Upload Receipt"
+msgstr "העלה קבלה"
+
+msgid "Receipt Name"
+msgstr "שם הקבלה"
+
+msgid "e.g., Doctor Visit - Jan 15"
+msgstr "למשל, ביקור אצל רופא - 15 בינואר"
+
+msgid "Date"
+msgstr "תאריך"
+
+msgid "Receipt File"
+msgstr "קובץ קבלה"
+
+msgid "Claim Status"
+msgstr "סטטוס תביעה"
+
+msgid "Refunded"
+msgstr "הוחזר"
+
+msgid "Sent to Insurance"
+msgstr "נשלח לביטוח"
+
+msgid "Insurance Company"
+msgstr "חברת ביטוח"
+
+msgid "Family Members Count"
+msgstr "מספר חברי משפחה"
+
+msgid "Family Members"
+msgstr "חברי משפחה"
+
+msgid "Notes"
+msgstr "הערות"
+
+msgid "Any additional notes..."
+msgstr "כל הערות נוספות..."
+
+msgid "Logout"
+msgstr "התנתקות"
+
+msgid "Profile"
+msgstr "פרופיל"

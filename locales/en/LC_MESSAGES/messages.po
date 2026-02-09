@@ -1,0 +1,164 @@
+# English translations for ReimbursementTracker
+# Copyright (C) 2026 ReimbursementTracker Project
+# This file is distributed under the same license as the ReimbursementTracker package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ReimbursementTracker 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# API messages
+msgid "API running"
+msgstr "API running"
+
+# Auth messages
+msgid "Username is required"
+msgstr "Username is required"
+
+msgid "Username already exists. Please try another or sign in."
+msgstr "Username already exists. Please try another or sign in."
+
+msgid "Username not found"
+msgstr "Username not found"
+
+msgid "User not found"
+msgstr "User not found"
+
+msgid "Access denied"
+msgstr "Access denied"
+
+msgid "Please log in before uploading."
+msgstr "Please log in before uploading."
+
+# Upload messages
+msgid "name is required"
+msgstr "name is required"
+
+msgid "Upload failed"
+msgstr "Upload failed"
+
+msgid "Uploaded"
+msgstr "Uploaded"
+
+# Search messages
+msgid "Search failed"
+msgstr "Search failed"
+
+# Update messages
+msgid "Updated metadata for"
+msgstr "Updated metadata for"
+
+# Delete messages
+msgid "Delete failed"
+msgstr "Delete failed"
+
+msgid "Deleted"
+msgstr "Deleted"
+
+msgid "Delete returned"
+msgstr "Delete returned"
+
+# UI Labels and Buttons (from templates)
+msgid "Sign in to manage your insurance claims"
+msgstr "Sign in to manage your insurance claims"
+
+msgid "Username"
+msgstr "Username"
+
+msgid "Enter your username"
+msgstr "Enter your username"
+
+msgid "Sign In"
+msgstr "Sign In"
+
+msgid "Get started managing your insurance claims"
+msgstr "Get started managing your insurance claims"
+
+msgid "Create Account"
+msgstr "Create Account"
+
+msgid "Choose a username"
+msgstr "Choose a username"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "your.email@example.com"
+msgstr "your.email@example.com"
+
+msgid "Phone"
+msgstr "Phone"
+
+msgid "(555) 123-4567"
+msgstr "(555) 123-4567"
+
+msgid "Family members"
+msgstr "Family members"
+
+msgid "Separate names with commas"
+msgstr "Separate names with commas"
+
+msgid "Insurance companies"
+msgstr "Insurance companies"
+
+msgid "Separate with commas"
+msgstr "Separate with commas"
+
+msgid "ReimbursementTracker - Dashboard"
+msgstr "ReimbursementTracker - Dashboard"
+
+msgid "Receipts Stored"
+msgstr "Receipts Stored"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Upload Receipt"
+msgstr "Upload Receipt"
+
+msgid "Receipt Name"
+msgstr "Receipt Name"
+
+msgid "e.g., Doctor Visit - Jan 15"
+msgstr "e.g., Doctor Visit - Jan 15"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Receipt File"
+msgstr "Receipt File"
+
+msgid "Claim Status"
+msgstr "Claim Status"
+
+msgid "Refunded"
+msgstr "Refunded"
+
+msgid "Sent to Insurance"
+msgstr "Sent to Insurance"
+
+msgid "Insurance Company"
+msgstr "Insurance Company"
+
+msgid "Family Members Count"
+msgstr "Family Members Count"
+
+msgid "Family Members"
+msgstr "Family Members"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "Any additional notes..."
+msgstr "Any additional notes..."
+
+msgid "Logout"
+msgstr "Logout"
+
+msgid "Profile"
+msgstr "Profile"
