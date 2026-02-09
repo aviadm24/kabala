@@ -20,6 +20,7 @@ class Receipt(Base):
     __tablename__ = "receipts"
 
     public_id = Column(String, primary_key=True)
+    resource_type = Column(String)
     user_id = Column(Integer, ForeignKey("users.user_id"))
     username = Column(String)
     name = Column(String)

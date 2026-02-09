@@ -380,7 +380,7 @@ def run_ocr_on_image(image: UploadFile) -> dict:
 async def upload_receipt(request: Request, 
                          name: str = Form(...), 
                          date: Optional[str] = Form(None), 
-                         image: UploadFile = File(...),
+                         file: UploadFile = File(...),
                          action: str = Form("save"),
                          db = Depends(get_db)):
     # require a logged-in user
@@ -482,12 +482,19 @@ async def upload_receipt(request: Request,
     context_str = '|'.join(ctx_parts)
 
     try:
+        # Determine resource type based on file extension
+        file_ext = (file.filename or '').lower().split('.')[-1]
+        if file_ext == 'pdf':
+            resource_type = "raw"
+        else:
+            resource_type = "auto"
+        
         # Upload using the underlying file-like object
         result = cloudinary.uploader.upload(
-            image.file,
+            file.file,
             public_id=public_id,
             folder='uploads',
-            resource_type='image',
+            resource_type=resource_type,
             context=context_str
         )
 
@@ -496,10 +503,10 @@ async def upload_receipt(request: Request,
         if action == "ocr":
             try:
                 # IMPORTANT: rewind file, Cloudinary already consumed it
-                await image.seek(0)
+                await file.seek(0)
 
                 # Call your OCR logic (Vision / LangGraph)
-                ocr_result = run_ocr_on_image(image)
+                ocr_result = run_ocr_on_image(file)
 
                 logger.info(
                     f"OCR completed for user={username}, public_id={public_id}"
@@ -535,6 +542,7 @@ async def upload_receipt(request: Request,
     # save to sqlite
     rec = {
         'public_id': result.get('public_id', public_id),
+        'resource_type': result.get('resource_type'),
         'user_id': user_id,
         'username': username,
         'name': name,
@@ -549,11 +557,10 @@ async def upload_receipt(request: Request,
         'secure_url': result.get('secure_url'),
         'created_at': result.get('created_at')
     }
-    try:
-        db = SessionLocal()
-        insert_receipt(db, rec)
-    except Exception:
-        pass
+    # try:
+    insert_receipt(db, rec)
+    # except Exception:
+    #     pass
 
     # attach db copy to result so template can show values
     result['_db'] = rec
@@ -727,7 +734,11 @@ def delete_image(request: Request, public_id: str = Form(...),
     #     return JSONResponse({"error": "Access denied"}, status_code=403)
     
     try:
-        res = cloudinary.uploader.destroy(public_id, resource_type='image')
+        # Determine resource type from the stored resource in DB or use auto-detect
+        db_rec = get_receipt_db(db, public_id)
+        resource_type = db_rec.resource_type if db_rec else 'image'
+        
+        res = cloudinary.uploader.destroy(public_id, resource_type=resource_type)
         logger.info(f'Image deleted successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
         logger.error(f'Delete failed for {public_id} by user {username} (id={user_id}): {e}')
