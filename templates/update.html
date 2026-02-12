@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _("Update Claim") }} - {{ _("ReimbursementTracker") }}{% endblock %}
+
+{% block content %}
+
+<div class="max-w-2xl">
+  <h2 class="mb-lg">{{ _("Update Claim Details") }}</h2>
+  
+  <div class="card">
+    <!-- Claim Info Display -->
+    <div class="mb-lg p-md border-b">
+      <h3 class="text-lg mb-md">{{ claim.name }}</h3>
+      <div class="grid gap-sm text-sm">
+        <div class="flex justify-between">
+          <span class="text-secondary">{{ _("Date") }}:</span>
+          <span>{{ claim.date }}</span>
+        </div>
+        {% if claim.resource_type %}
+          <div class="flex justify-between">
+            <span class="text-secondary">{{ _("Type") }}:</span>
+            <span>{{ claim.resource_type }}</span>
+          </div>
+        {% endif %}
+        {% if claim.secure_url and claim.resource_type != 'raw' %}
+          <div>
+            <a href="{{ claim.secure_url }}" target="_blank" class="btn btn-ghost btn-sm">
+              👁️ {{ _("View receipt image") }}
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Update Form -->
+    <form method="POST" action="/update/save" class="flex-col gap-lg">
+      <input type="hidden" name="public_id" value="{{ claim.public_id }}" />
+      
+      <!-- Insurance Company -->
+      <div class="form-group">
+        <label for="insurance_company">{{ _("Insurance company") }}</label>
+        <input 
+          type="text" 
+          id="insurance_company"
+          name="insurance_company" 
+          value="{{ claim.insurance_company or '' }}"
+          placeholder="{{ _('Enter insurance company name...') }}"
+        />
+      </div>
+
+      <!-- Sent to Insurance -->
+      <div class="form-group">
+        <label for="sent_to_insurance">{{ _("Claim Status") }}</label>
+        <select id="sent_to_insurance" name="sent_to_insurance">
+          <option value="">{{ _("Not submitted yet") }}</option>
+          <option value="yes" {% if claim.sent_to_insurance %}selected{% endif %}>{{ _("Sent to insurance") }}</option>
+        </select>
+      </div>
+
+      <!-- Refunded -->
+      <div class="form-group">
+        <label for="refunded">{{ _("Refund Status") }}</label>
+        <select id="refunded" name="refunded">
+          <option value="">{{ _("Pending") }}</option>
+          <option value="yes" {% if claim.refunded %}selected{% endif %}>{{ _("Refunded") }}</option>
+        </select>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-md justify-end">
+        <a href="/" class="btn btn-secondary">{{ _("Cancel") }}</a>
+        <button type="submit" class="btn btn-primary">{{ _("Save Changes") }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

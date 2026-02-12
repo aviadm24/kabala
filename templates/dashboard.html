@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{#
+Dashboard: Claims-centric view
+Shows all user claims with their current status and next steps.
+This is the main view - emphasize "we're handling this for you".
+#}
+
+{% block title %}{{ _("My Claims") }} - {{ _("ReimbursementTracker") }}{% endblock %}
+
+{% block content %}
+
+  <!-- Quick stats -->
+  {% if count is defined %}
+    <div class="grid grid-cols-3 mb-lg">
+      <div class="card text-center">
+        <div class="text-2xl font-bold text-primary-base">{{ count }}</div>
+        <p class="text-sm text-secondary">{{ _("Claims filed") }}</p>
+      </div>
+      <div class="card text-center">
+        <div class="text-2xl font-bold text-success">{{ approved_count | default(0) }}</div>
+        <p class="text-sm text-secondary">{{ _("Approved") }}</p>
+      </div>
+      <div class="card text-center">
+        <div class="text-2xl font-bold text-pending">{{ pending_count | default(0) }}</div>
+        <p class="text-sm text-secondary">{{ _("In progress") }}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Action: Upload new receipt -->
+  <div class="card alert alert-info mb-lg">
+    <div class="flex align-center justify-between gap-md">
+      <div>
+        <h4 class="mb-sm">{{ _("Need to submit a receipt?") }}</h4>
+        <p class="text-sm">{{ _("We'll handle the rest. Just upload and we'll take care of your claim.") }}</p>
+      </div>
+      <a href="#upload-form" class="btn btn-primary btn-sm">{{ _("Upload") }} +</a>
+    </div>
+  </div>
+
+  <!-- Claims list -->
+  {% if results %}
+    <div class="mb-lg">
+      <h3>{{ _("Your claims") }}</h3>
+      <div class="grid gap-md">
+        {% for result in results %}
+          {% include "claim_card.html" with context %}
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="card text-center p-lg">
+      <p class="text-lg text-secondary">{{ _("No claims yet") }}</p>
+      <p class="text-sm text-tertiary mb-lg">{{ _("Upload your first receipt to get started.") }}</p>
+      <a href="#upload-form" class="btn btn-primary">{{ _("Upload receipt") }}</a>
+    </div>
+  {% endif %}
+
+  <!-- Search/Filter section (optional) -->
+  {% if username %}
+    <div class="card mt-lg">
+      <h4 class="mb-md">{{ _("Search claims") }}</h4>
+      <form method="GET" action="/search" class="grid gap-md">
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>{{ _("Name") }}</label>
+            <input type="text" name="name" placeholder="{{ _('Receipt name...') }}" />
+          </div>
+          <div class="form-group">
+            <label>{{ _("Date") }}</label>
+            <input type="date" name="date" />
+          </div>
+          <div class="form-group">
+            <label>{{ _("Insurance company") }}</label>
+            <input type="text" name="insurance_company" placeholder="{{ _('Company name...') }}" />
+          </div>
+          <div class="form-group">
+            <label>{{ _("Status") }}</label>
+            <select name="sent_to_insurance">
+              <option value="">{{ _("Any status") }}</option>
+              <option value="yes">{{ _("In progress") }}</option>
+              <option value="no">{{ _("Not submitted") }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-md">
+          <button type="submit" class="btn btn-primary">{{ _("Search") }}</button>
+          <a href="/" class="btn btn-secondary">{{ _("Clear") }}</a>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+{% endblock %}

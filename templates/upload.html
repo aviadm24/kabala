@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{#
+Upload page: Designed as a PROMISE, not a form.
+
+Before the upload:
+- Explain what happens after upload
+- Reduce anxiety
+- Emphasize "no work required from you"
+
+After upload:
+- Confirm receipt
+- Explain next steps
+- Do NOT say "saved to database" or similar
+
+All text must be gettext-enabled (_()).
+#}
+
+{% block title %}{{ _("Upload Receipt") }} - {{ _("ReimbursementTracker") }}{% endblock %}
+
+{% block content %}
+
+  {% if not message %}
+    <!-- Before upload: Reassurance and promise -->
+    <div class="grid gap-lg mb-lg">
+      <!-- Heading -->
+      <div class="text-center mb-md">
+        <h2>{{ _("Upload your receipt") }}</h2>
+        <p class="text-lg text-secondary">{{ _("We'll handle your insurance claim from here.") }}</p>
+      </div>
+
+      <!-- Promise cards -->
+      <div class="grid grid-cols-3 gap-md text-center">
+        <div class="card">
+          <div class="text-3xl mb-sm">📸</div>
+          <p class="font-semibold">{{ _("We receive it") }}</p>
+          <p class="text-sm text-secondary">{{ _("Your receipt is safely stored.") }}</p>
+        </div>
+        <div class="card">
+          <div class="text-3xl mb-sm">🔍</div>
+          <p class="font-semibold">{{ _("We analyze it") }}</p>
+          <p class="text-sm text-secondary">{{ _("We extract key information automatically.") }}</p>
+        </div>
+        <div class="card">
+          <div class="text-3xl mb-sm">✉️</div>
+          <p class="font-semibold">{{ _("We submit it") }}</p>
+          <p class="text-sm text-secondary">{{ _("We handle the insurance claim for you.") }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload form -->
+    <div class="card">
+      <form method="POST" action="/upload" enctype="multipart/form-data" class="grid gap-lg">
+        <!-- Receipt details -->
+        <div class="grid gap-md">
+          <h3>{{ _("Receipt details") }}</h3>
+          
+          <div class="form-group">
+            <label for="name">{{ _("What is this for?") }} *</label>
+            <input type="text" id="name" name="name" placeholder="{{ _('e.g., Doctor visit, Pharmacy, Lab test...') }}" required />
+            <p class="text-xs text-tertiary mt-sm">{{ _("Help us categorize your claim.") }}</p>
+          </div>
+
+          <div class="form-group">
+            <label for="date">{{ _("Date of visit") }}</label>
+            <input type="date" id="date" name="date" />
+            <p class="text-xs text-tertiary mt-sm">{{ _("Leave blank to use today's date.") }}</p>
+          </div>
+
+          <div class="form-group">
+            <label for="file">{{ _("Upload receipt image or PDF") }} *</label>
+            <input type="file" id="file" name="file" accept="image/*,.pdf" required />
+            <p class="text-xs text-tertiary mt-sm">{{ _("JPG, PNG, or PDF. Max 10MB.") }}</p>
+          </div>
+        </div>
+
+        <!-- Insurance details (optional) -->
+        <div class="grid gap-md">
+          <h3>{{ _("Insurance details (optional)") }}</h3>
+          <p class="text-sm text-secondary">{{ _("You can fill this in now or update it later.") }}</p>
+
+          <div class="form-group">
+            <label for="insurance_company">{{ _("Insurance company") }}</label>
+            <input type="text" id="insurance_company" name="insurance_company" placeholder="{{ _('Company name...') }}" />
+          </div>
+
+          <div class="form-group">
+            <label for="account_username">{{ _("Policy number or account username") }}</label>
+            <input type="text" id="account_username" name="account_username" placeholder="{{ _('Your account info...') }}" />
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-md justify-between">
+          <a href="/" class="btn btn-secondary">{{ _("Cancel") }}</a>
+          <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
+            ✓ {{ _("Upload receipt") }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+  {% else %}
+    <!-- After upload: Confirmation and next steps -->
+    <div class="text-center mb-lg">
+      <div class="text-5xl mb-md">✓</div>
+      <h2 class="text-success">{{ _("Receipt uploaded!") }}</h2>
+      <p class="text-lg text-secondary">{{ _("We received your receipt and we're processing it.") }}</p>
+    </div>
+
+    <!-- What happens next -->
+    <div class="card mb-lg">
+      <h3 class="mb-md">{{ _("What happens next") }}</h3>
+      <div class="timeline">
+        <div class="timeline-step completed">
+          <span class="timeline-label">{{ _("Receipt received") }}</span>
+        </div>
+        <div class="timeline-step active">
+          <span class="timeline-label">{{ _("Processing...") }}</span>
+        </div>
+        <div class="timeline-step">
+          <span class="timeline-label">{{ _("Claim submission") }}</span>
+        </div>
+        <div class="timeline-step">
+          <span class="timeline-label">{{ _("Refund") }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="flex gap-md justify-center">
+      <a href="/" class="btn btn-primary btn-lg">{{ _("View my claims") }}</a>
+    </div>
+  {% endif %}
+
+{% endblock %}

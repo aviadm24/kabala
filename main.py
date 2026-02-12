@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request, Depends
+from fastapi import FastAPI, UploadFile, File, Form, Request, Depends, Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timedelta
 import cloudinary
 import cloudinary.uploader
+import cloudinary.api
 from typing import Optional
 import sqlite3
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -50,6 +51,8 @@ logging.basicConfig(
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 app.include_router(ocr_router, prefix="/api/ocr")
 
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Middleware to handle lang cookie
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -217,6 +220,26 @@ def safe_public_id(name: str, date_str: str) -> str:
     base = base.strip().replace(' ', '_')
     base = re.sub(r'[^A-Za-z0-9_\-]', '', base)
     return base[:200]
+
+
+def _ensure_result_has_db_object(result: dict) -> dict:
+    """Ensure result has a _db attribute. Create default if missing."""
+    if not result.get('_db'):
+        # Create a default receipt object with empty/default values
+        result['_db'] = {
+            'public_id': result.get('public_id', ''),
+            'name': result.get('public_id', '').split('_')[0] if result.get('public_id') else '',
+            'date': result.get('created_at', '')[:10] if result.get('created_at') else '',
+            'insurance_company': '',
+            'sent_to_insurance': '',
+            'refund_details': '[]',
+            'account_username': '',
+            'family_count': 0,
+            'family_names': '',
+            'how_work': '',
+            'resource_type': result.get('resource_type', 'image')
+        }
+    return result
 
 
 def _determine_locale_from_request(request: Request) -> str:
@@ -740,7 +763,12 @@ async def upload_receipt(request: Request,
 
 
 @app.get('/search')
-def search(request: Request, name: Optional[str] = None, date: Optional[str] = None, refunded: Optional[str] = None, sent_to_insurance: Optional[str] = None, insurance_company: Optional[str] = None):
+def search(request: Request, 
+           name: Optional[str] = None, 
+           date: Optional[str] = None, 
+           refunded: Optional[str] = None, 
+           sent_to_insurance: Optional[str] = None, 
+           insurance_company: Optional[str] = None):
     """Search uploaded images by name, date and metadata using Cloudinary Search API."""
     locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
     
@@ -809,6 +837,9 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
         receipt = get_receipt_db(db, r.get('public_id'))
         if receipt:
             r['_db'] = receipt
+        else:
+            # Ensure result has a default _db object
+            r = _ensure_result_has_db_object(r)
         enriched.append(r)
 
     return templates.TemplateResponse('index.html', {
@@ -826,8 +857,66 @@ def search(request: Request, name: Optional[str] = None, date: Optional[str] = N
     })
 
 
-@app.post('/update')
-def update_metadata(request: Request, public_id: str = Form(...), refunded: Optional[str] = Form(None), sent_to_insurance: Optional[str] = Form(None), insurance_company: Optional[str] = Form(None)):
+@app.get('/update')
+def show_update_form(request: Request, public_id: str = Query(...)):
+    """Display the update form for a receipt."""
+    locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
+    
+    user_id, username = get_verified_cookies(request)
+    if not user_id or not username:
+        return RedirectResponse(url='/login', status_code=302)
+    
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url='/login', status_code=302)
+    
+    # Verify user owns this receipt
+    db = SessionLocal()
+    db_rec = get_receipt_db(db, public_id)
+    if not db_rec or db_rec.user_id != user_id:
+        return RedirectResponse(url='/', status_code=302)
+    
+    try:
+        # Fetch the receipt from Cloudinary
+        res = cloudinary.api.resource(public_id)
+        # Ensure it has a _db object
+        res = _ensure_result_has_db_object(res)
+        
+        # Load the database record and merge its values
+        db_rec = get_receipt_db(db, public_id)
+        if db_rec:
+            # Merge database fields into response so template can access them
+            res['insurance_company'] = db_rec.insurance_company or ''
+            res['sent_to_insurance'] = db_rec.sent_to_insurance or ''
+            res['refunded'] = getattr(db_rec, 'refunded', '') or ''
+            res['public_id'] = db_rec.public_id
+            res['name'] = db_rec.name
+            res['date'] = db_rec.date
+            res['_db'] = db_rec
+    except Exception as e:
+        print(f"Error fetching receipt: {e}")
+        res = None
+    
+    if not res:
+        return RedirectResponse(url='/', status_code=302)
+    
+    return templates.TemplateResponse('update.html', {
+        "request": request,
+        "claim": res,
+        "username": username,
+        "_": gettext_fn,
+        "ngettext": ngettext_fn,
+        "lang": _loc,
+    })
+
+
+@app.post('/update/save')
+def update_metadata(request: Request, 
+                    public_id: str = Form(...), 
+                    refunded: Optional[str] = Form(None), 
+                    sent_to_insurance: Optional[str] = Form(None), 
+                    insurance_company: Optional[str] = Form(None)):
     """Update metadata (context) for an existing image."""
     locale, gettext_fn, ngettext_fn, _loc = _get_locale_and_translator(request)
     
@@ -843,7 +932,7 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
     # Verify user owns this receipt
     db = SessionLocal()
     db_rec = get_receipt_db(db, public_id)
-    if not db_rec or db_rec.get('user_id') != user_id:
+    if not db_rec or db_rec.user_id != user_id:
         return JSONResponse({"error": gettext_fn("Access denied")}, status_code=403)
     
     try:
@@ -879,7 +968,7 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
             ctx_parts.append(f"insurance_company={_safe(insurance_val)}")
         
         context_str = '|'.join(ctx_parts)
-        cloudinary.uploader.add_context(context_str, public_id=public_id)
+        cloudinary.uploader.add_context(context_str, public_ids=[public_id])
         
         # also update sqlite
         update_fields = {
@@ -894,7 +983,10 @@ def update_metadata(request: Request, public_id: str = Form(...), refunded: Opti
     # fetch updated resource
     try:
         res = cloudinary.api.resource(public_id)
-    except Exception:
+        # Ensure it has a _db object
+        res = _ensure_result_has_db_object(res)
+    except Exception as e:
+        print(f"Error fetching updated receipt: {e}")
         res = None
 
     msg = gettext_fn("Updated metadata for") + f" {public_id}"

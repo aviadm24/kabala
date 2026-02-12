@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ _("ReimbursementTracker") }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">📋</div>
+          <div class="logo-text">
+            <h1>{{ _("ReimbursementTracker") }}</h1>
+            <p>{{ _("Insurance claims made simple") }}</p>
+          </div>
+        </div>
+
+        <div class="user-section">
+          {% if username %}
+            <div class="user-info">
+              <p class="text-sm">{{ _("Logged in as") }}</p>
+              <p class="username">{{ username }}</p>
+            </div>
+            <a href="/profile" class="btn btn-ghost btn-sm">{{ _("Profile") }}</a>
+            <a href="/logout" class="btn btn-ghost btn-sm">{{ _("Logout") }}</a>
+          {% else %}
+            <a href="/login" class="btn btn-secondary btn-sm">{{ _("Login") }}</a>
+            <a href="/signup" class="btn btn-primary btn-sm">{{ _("Sign up") }}</a>
+          {% endif %}
+
+          <!-- Language Switcher -->
+          <div class="lang-switcher">
+            <a href="{{ request.url.path | add_lang('en') }}" class="{% if lang == 'en' %}active{% endif %}" title="English">🇬🇧 EN</a>
+            <a href="{{ request.url.path | add_lang('he') }}" class="{% if lang == 'he' %}active{% endif %}" title="עברית">🇮🇱 HE</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    {% if message %}
+      {% if "error" in message.lower() or "failed" in message.lower() or "not found" in message.lower() %}
+        <div class="container mt-lg">
+          <div class="alert alert-error">{{ message }}</div>
+        </div>
+      {% elif "success" in message.lower() or "uploaded" in message.lower() or "updated" in message.lower() or "deleted" in message.lower() %}
+        <div class="container mt-lg">
+          <div class="alert alert-success">{{ message }}</div>
+        </div>
+      {% else %}
+        <div class="container mt-lg">
+          <div class="alert alert-info">{{ message }}</div>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- Main content -->
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

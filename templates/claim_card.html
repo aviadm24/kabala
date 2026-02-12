@@ -1,0 +1,67 @@
+{#
+  Render a single claim as a service card.
+  
+  Context required:
+    - claim: Receipt object with public_id, name, date, resource_type, etc.
+    - status_text: Human-friendly status (e.g., "We're processing your claim")
+    - status_value: Machine status (e.g., "processing")
+    - estimated_amount: Optional refund estimate
+#}
+
+<div class="card claim-card status-{{ status_value }}">
+  <div class="card-header">
+    <div class="flex-col gap-sm">
+      <p class="card-title">{{ claim.name }}</p>
+      <p class="card-subtitle">{{ claim.date }}</p>
+    </div>
+    {% if claim.secure_url and claim.resource_type != 'raw' %}
+      <a href="{{ claim.secure_url }}" target="_blank" class="btn btn-ghost btn-sm" title="{{ _('View receipt image') }}">
+        👁️ {{ _("View") }}
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="card-body">
+    <!-- Status indicator -->
+    <div class="flex align-center gap-sm mb-md">
+      <span class="status-dot {{ status_value }}"></span>
+      <span class="text-sm text-secondary">{{ status_text }}</span>
+    </div>
+
+    <!-- Metadata -->
+    {% if claim.insurance_company or claim.sent_to_insurance or claim._db.refund_details %}
+      <div class="flex-col gap-sm text-sm">
+        {% if claim.insurance_company %}
+          <div>
+            <span class="font-medium">{{ _("Insurance company:") }}</span>
+            <span>{{ claim.insurance_company }}</span>
+          </div>
+        {% endif %}
+        {% if claim.sent_to_insurance %}
+          <div>
+            <span class="font-medium">{{ _("Status:") }}</span>
+            <span class="badge badge-pending">{{ _("In Progress") }}</span>
+          </div>
+        {% endif %}
+        {% if estimated_amount %}
+          <div>
+            <span class="font-medium">{{ _("Estimated refund:") }}</span>
+            <span>{{ estimated_amount }}</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card-footer">
+    <a href="/update?public_id={{ claim.public_id }}" class="btn btn-secondary btn-sm">
+      ✏️ {{ _("Update") }}
+    </a>
+    <form method="POST" action="/delete" style="margin: 0;">
+      <input type="hidden" name="public_id" value="{{ claim.public_id }}" />
+      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(&quot;{{ _('Are you sure?') }}&quot;)">
+        🗑️ {{ _("Delete") }}
+      </button>
+    </form>
+  </div>
+</div>
