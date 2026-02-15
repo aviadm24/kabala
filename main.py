@@ -24,6 +24,8 @@ from pathlib import Path
 
 from admin.views import setup_admin
 from api.ocr import router as ocr_router
+from api.claims import router as claims_router
+from api.webhooks import router as webhooks_router
 from i18n import get_best_locale_from_headers, get_translator, DEFAULT_LOCALE
 
 
@@ -50,6 +52,8 @@ logging.basicConfig(
 
 app = FastAPI(title="Receipt Uploader (FastAPI + Cloudinary)")
 app.include_router(ocr_router, prefix="/api/ocr")
+app.include_router(claims_router)
+app.include_router(webhooks_router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")

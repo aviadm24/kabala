@@ -35,6 +35,10 @@ class TestConfig:
     run_slow_tests: bool = False
     run_ocr_tests: bool = False
     log_level: str = "INFO"
+    # Email testing
+    email_test_mode: bool = True
+    test_email_recipient: Optional[str] = None
+    resend_api_key: Optional[str] = None
     
     @classmethod
     def from_env(cls) -> "TestConfig":
@@ -80,6 +84,9 @@ class TestConfig:
             run_slow_tests=os.getenv("TEST_RUN_SLOW", "false").lower() == "true",
             run_ocr_tests=os.getenv("TEST_RUN_OCR", "false").lower() == "true",
             log_level=os.getenv("TEST_LOG_LEVEL", "INFO"),
+            email_test_mode=os.getenv("EMAIL_TEST_MODE", "true").lower() == "true",
+            test_email_recipient=os.getenv("TEST_EMAIL_RECIPIENT", None),
+            resend_api_key=os.getenv("RESEND_API_KEY", None),
         )
     
     def is_local(self) -> bool:
@@ -95,8 +102,21 @@ class TestConfig:
         return (
             f"TestConfig(env={self.environment.value}, "
             f"db={self.database_type.value}, "
-            f"api_url={self.api_base_url})"
+            f"api_url={self.api_base_url}, "
+            f"email_test_mode={self.email_test_mode})"
         )
+
+
+# Singleton instance
+_config_instance: Optional[TestConfig] = None
+
+
+def get_config() -> TestConfig:
+    """Get or create the global test config instance."""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = TestConfig.from_env()
+    return _config_instance
 
 
 # Global config instance

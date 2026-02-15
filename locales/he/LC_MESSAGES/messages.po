@@ -8,6 +8,29 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: he\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Title and Header
+msgid "ReimbursementTracker"
+msgstr "ReimbursementTracker"
+
+msgid "Insurance claims made simple"
+msgstr "תביעות ביטוח בפשטות"
+
+msgid "Logged in as"
+msgstr "מחובר בתור"
+
+msgid "Profile"
+msgstr "פרופיל"
+
+msgid "Logout"
+msgstr "התנתקות"
+
+msgid "Login"
+msgstr "התחברות"
+
+msgid "Sign up"
+msgstr "הרשמה"
 
 # API messages
 msgid "API running"
@@ -60,7 +83,7 @@ msgstr "נמחק"
 msgid "Delete returned"
 msgstr "המחיקה חזרה"
 
-# UI Labels and Buttons (from templates)
+# Login Page
 msgid "Sign in to manage your insurance claims"
 msgstr "התחבר לניהול תביעות הביטוח שלך"
 
@@ -73,6 +96,10 @@ msgstr "הזן את שם המשתמש שלך"
 msgid "Sign In"
 msgstr "התחברות"
 
+msgid "Don't have an account?"
+msgstr "אין לך חשבון?"
+
+# Signup Page
 msgid "Get started managing your insurance claims"
 msgstr "התחל לנהל את תביעות הביטוח שלך"
 
@@ -106,8 +133,81 @@ msgstr "חברות ביטוח"
 msgid "Separate with commas"
 msgstr "הפרד בפסיקים"
 
-msgid "ReimbursementTracker - Dashboard"
-msgstr "ReimbursementTracker - לוח בקרה"
+msgid "Already have an account?"
+msgstr "יש לך כבר חשבון?"
+
+# Dashboard / Home Page
+msgid "My Claims"
+msgstr "התביעות שלי"
+
+msgid "Claims filed"
+msgstr "תביעות שהוגשו"
+
+msgid "Approved"
+msgstr "אושרו"
+
+msgid "In progress"
+msgstr "בתהליך"
+
+msgid "Need to submit a receipt?"
+msgstr "צריך להגיש קבלה?"
+
+msgid "We'll handle the rest. Just upload and we'll take care of your claim."
+msgstr "נדאג לכל השאר. פשוט העלה ואנחנו נדאג לתביעה שלך."
+
+msgid "Upload"
+msgstr "העלאה"
+
+msgid "Upload new receipt"
+msgstr "העלה קבלה חדשה"
+
+msgid "Receipt details"
+msgstr "פרטי הקבלה"
+
+msgid "What is this for?"
+msgstr "למה זה?"
+
+msgid "e.g., Doctor visit, Pharmacy, Lab test..."
+msgstr "לדוגמה: ביקור אצל רופא, בית מרקחת, בדיקה במעבדה..."
+
+msgid "Help us categorize your claim."
+msgstr "עזור לנו לסווג את התביעה שלך."
+
+msgid "Date of visit"
+msgstr "תאריך הביקור"
+
+msgid "Leave blank to use today's date."
+msgstr "השאר ריק כדי להשתמש בתאריך של היום."
+
+msgid "Upload receipt image or PDF"
+msgstr "העלה תמונת קבלה או PDF"
+
+msgid "JPG, PNG, or PDF. Max 10MB."
+msgstr "JPG, PNG, או PDF. עד 10MB."
+
+msgid "Insurance details (optional)"
+msgstr "פרטי ביטוח (אופציונלי)"
+
+msgid "You can fill this in now or update it later."
+msgstr "אתה יכול למלא זאת עכשיו או לעדכן מאוחר יותר."
+
+msgid "Insurance company"
+msgstr "חברת ביטוח"
+
+msgid "Company name..."
+msgstr "שם החברה..."
+
+msgid "Policy number or account username"
+msgstr "מספר הפוליסה או שם המשתמש של החשבון"
+
+msgid "Your account info..."
+msgstr "פרטי החשבון שלך..."
+
+msgid "Clear"
+msgstr "נקה"
+
+msgid "Your claims"
+msgstr "התביעות שלך"
 
 msgid "Receipts Stored"
 msgstr "קבלות מאוחסנות"
@@ -157,8 +257,369 @@ msgstr "הערות"
 msgid "Any additional notes..."
 msgstr "כל הערות נוספות..."
 
-msgid "Logout"
-msgstr "התנתקות"
+# Claims actions
+msgid "View Claim"
+msgstr "צפה בתביעה"
 
-msgid "Profile"
-msgstr "פרופיל"
+msgid "Edit Claim"
+msgstr "ערוך תביעה"
+
+msgid "Delete Claim"
+msgstr "מחק תביעה"
+
+msgid "Send to Insurance"
+msgstr "שלח לביטוח"
+
+msgid "Mark as Approved"
+msgstr "סמן כאושר"
+
+msgid "Mark as Pending"
+msgstr "סמן כממתין"
+
+msgid "Add Document"
+msgstr "הוסף מסמך"
+
+msgid "Download"
+msgstr "הורד"
+
+msgid "Share"
+msgstr "שתף"
+
+msgid "Save Changes"
+msgstr "שמור שינויים"
+
+msgid "Cancel"
+msgstr "בטל"
+
+msgid "Close"
+msgstr "סגור"
+
+msgid "Back"
+msgstr "חזור"
+
+msgid "Next"
+msgstr "הבא"
+
+msgid "Previous"
+msgstr "הקודם"
+
+msgid "Submit"
+msgstr "שלח"
+
+msgid "Save"
+msgstr "שמור"
+
+msgid "Delete"
+msgstr "מחק"
+
+msgid "Edit"
+msgstr "ערוך"
+
+msgid "Add"
+msgstr "הוסף"
+
+msgid "Search"
+msgstr "חיפוש"
+
+msgid "Filter"
+msgstr "סנן"
+
+msgid "Sort"
+msgstr "מיין"
+
+msgid "View"
+msgstr "צפה"
+
+msgid "Settings"
+msgstr "הגדרות"
+
+msgid "Help"
+msgstr "עזרה"
+
+msgid "About"
+msgstr "אודות"
+
+msgid "Contact"
+msgstr "צור קשר"
+
+msgid "Terms"
+msgstr "תנאים"
+
+msgid "Privacy"
+msgstr "פרטיות"
+
+msgid "Home"
+msgstr "בית"
+
+msgid "Dashboard"
+msgstr "לוח בקרה"
+
+# Status messages
+msgid "Success"
+msgstr "הצלחה"
+
+msgid "Error"
+msgstr "שגיאה"
+
+msgid "Warning"
+msgstr "אזהרה"
+
+msgid "Info"
+msgstr "מידע"
+
+msgid "Processing"
+msgstr "בעיבוד"
+
+msgid "Pending"
+msgstr "ממתין"
+
+msgid "Complete"
+msgstr "הושלם"
+
+msgid "Failed"
+msgstr "נכשל"
+
+msgid "Not found"
+msgstr "לא נמצא"
+
+# Form validation
+msgid "This field is required"
+msgstr "שדה זה נדרש"
+
+msgid "Invalid email"
+msgstr "דוא\"ל לא תקין"
+
+msgid "Invalid phone number"
+msgstr "מספר טלפון לא תקין"
+
+msgid "Password is too short"
+msgstr "הסיסמה קצרה מדי"
+
+msgid "Passwords do not match"
+msgstr "הסיסמאות לא תואמות"
+
+# Profile page
+msgid "My Profile"
+msgstr "הפרופיל שלי"
+
+msgid "Personal Information"
+msgstr "מידע אישי"
+
+msgid "Update Profile"
+msgstr "עדכן פרופיל"
+
+msgid "Change Password"
+msgstr "שנה סיסמה"
+
+msgid "Current Password"
+msgstr "הסיסמה הנוכחית"
+
+msgid "New Password"
+msgstr "סיסמה חדשה"
+
+msgid "Confirm Password"
+msgstr "אשר סיסמה"
+
+msgid "Update"
+msgstr "עדכן"
+
+msgid "Account Settings"
+msgstr "הגדרות חשבון"
+
+msgid "Privacy Settings"
+msgstr "הגדרות פרטיות"
+
+msgid "Notification Settings"
+msgstr "הגדרות התראות"
+
+# Common actions
+msgid "Are you sure?"
+msgstr "אתה בטוח?"
+
+msgid "Confirm"
+msgstr "אישור"
+
+msgid "Yes"
+msgstr "כן"
+
+msgid "No"
+msgstr "לא"
+
+msgid "Okay"
+msgstr "בסדר"
+
+msgid "Done"
+msgstr "בוצע"
+
+msgid "Loading..."
+msgstr "טוען..."
+
+msgid "Please wait"
+msgstr "אנא המתן"
+
+msgid "Try again"
+msgstr "נסה שוב"
+
+msgid "Learn more"
+msgstr "למד עוד"
+
+msgid "See all"
+msgstr "ראה הכל"
+
+msgid "Show more"
+msgstr "הצג עוד"
+
+msgid "Show less"
+msgstr "הצג פחות"
+
+# Empty states
+msgid "No claims yet"
+msgstr "אין תביעות עדיין"
+
+msgid "No results found"
+msgstr "לא נמצאו תוצאות"
+
+msgid "Nothing to show"
+msgstr "אין מה להציג"
+
+msgid "Get started by uploading your first receipt"
+msgstr "התחל בהעלאת הקבלה הראשונה שלך"
+
+# Time-related
+msgid "Today"
+msgstr "היום"
+
+msgid "Yesterday"
+msgstr "אתמול"
+
+msgid "This week"
+msgstr "השבוע הזה"
+
+msgid "This month"
+msgstr "החודש הזה"
+
+msgid "This year"
+msgstr "השנה הזאת"
+
+msgid "All time"
+msgstr "כל הזמנים"
+
+msgid "Just now"
+msgstr "זה עתה"
+
+msgid "minutes ago"
+msgstr "דקות"
+
+msgid "hours ago"
+msgstr "שעות"
+
+msgid "days ago"
+msgstr "ימים"
+
+# Months
+msgid "January"
+msgstr "ינואר"
+
+msgid "February"
+msgstr "פברואר"
+
+msgid "March"
+msgstr "מרץ"
+
+msgid "April"
+msgstr "אפריל"
+
+msgid "May"
+msgstr "מאי"
+
+msgid "June"
+msgstr "יוני"
+
+msgid "July"
+msgstr "יולי"
+
+msgid "August"
+msgstr "אוגוסט"
+
+msgid "September"
+msgstr "ספטמבר"
+
+msgid "October"
+msgstr "אוקטובר"
+
+msgid "November"
+msgstr "נובמבר"
+
+msgid "December"
+msgstr "דצמבר"
+
+# Days
+msgid "Monday"
+msgstr "שני"
+
+msgid "Tuesday"
+msgstr "שלישי"
+
+msgid "Wednesday"
+msgstr "רביעי"
+
+msgid "Thursday"
+msgstr "חמישי"
+
+msgid "Friday"
+msgstr "שישי"
+
+msgid "Saturday"
+msgstr "שבת"
+
+msgid "Sunday"
+msgstr "ראשון"
+
+# File-related
+msgid "Choose file"
+msgstr "בחר קובץ"
+
+msgid "No file selected"
+msgstr "לא נבחר קובץ"
+
+msgid "File too large"
+msgstr "הקובץ גדול מדי"
+
+msgid "Invalid file type"
+msgstr "סוג קובץ לא תקין"
+
+msgid "Upload in progress"
+msgstr "העלאה בעיצומה"
+
+msgid "Upload complete"
+msgstr "ההעלאה הושלמה"
+
+# Modal / Dialog
+msgid "Confirmation"
+msgstr "אישור"
+
+msgid "Warning Dialog"
+msgstr "דיאלוג אזהרה"
+
+msgid "Error Dialog"
+msgstr "דיאלוג שגיאה"
+
+msgid "Success Dialog"
+msgstr "דיאלוג הצלחה"
+
+# Additional UI
+msgid "Select all"
+msgstr "בחר הכל"
+
+msgid "Deselect all"
+msgstr "בטל בחירה הכל"
+
+msgid "Export"
+msgstr "ייצא"
+
+msgid "Import"
+msgstr "יבא"
+
+msgid "Print"
+msgstr "הדפס"
+

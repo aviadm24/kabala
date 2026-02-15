@@ -25,7 +25,7 @@ else:
 
 from tests.config import get_config
 from database import Base
-from models import User, Receipt
+from models import User, Receipt, Claim, ClaimEmail, ClaimStatus, EmailDirection
 from depts import get_db
 from main import app
 
@@ -130,6 +130,76 @@ def sample_receipt(db_session, sample_user):
     db_session.commit()
     db_session.refresh(receipt)
     return receipt
+
+
+@pytest.fixture
+def sample_claim(db_session, sample_user):
+    """Create a sample claim for testing."""
+    import uuid
+    from datetime import datetime
+    unique_id = str(uuid.uuid4())[:8]
+    claim = Claim(
+        public_id=unique_id,
+        user_id=sample_user.user_id,
+        reply_email=f"claim-{unique_id}@mail.yourapp.com",
+        status=ClaimStatus.DRAFT,
+        insurance_company="Test Insurance Co",
+        insurance_contact_email="claims@testinsurance.com",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db_session.add(claim)
+    db_session.commit()
+    db_session.refresh(claim)
+    return claim
+
+
+@pytest.fixture
+def sample_outbound_email(db_session, sample_claim):
+    """Create a sample outbound email for testing."""
+    import uuid
+    from datetime import datetime
+    unique_msg_id = f"msg_{str(uuid.uuid4())[:12]}"
+    email = ClaimEmail(
+        claim_id=sample_claim.id,
+        direction=EmailDirection.OUTBOUND,
+        message_id=unique_msg_id,
+        sender="onboarding@resend.dev",
+        recipient="claims@testinsurance.com",
+        subject=f"Insurance Claim Submission - {sample_claim.public_id}",
+        body_text="This is a test claim...",
+        body_html="<p>This is a test claim...</p>",
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(email)
+    db_session.commit()
+    db_session.refresh(email)
+    return email
+
+
+@pytest.fixture
+def sample_inbound_email(db_session, sample_claim):
+    """Create a sample inbound email for testing."""
+    import uuid
+    from datetime import datetime
+    import json
+    unique_msg_id = f"msg_{str(uuid.uuid4())[:12]}"
+    email = ClaimEmail(
+        claim_id=sample_claim.id,
+        direction=EmailDirection.INBOUND,
+        message_id=unique_msg_id,
+        sender="claims@testinsurance.com",
+        recipient=sample_claim.reply_email,
+        subject="Re: Insurance Claim Submission",
+        body_text="Your claim has been approved.",
+        body_html="<p>Your claim has been approved.</p>",
+        raw_headers_json=json.dumps({"Message-ID": unique_msg_id, "From": "claims@testinsurance.com"}),
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(email)
+    db_session.commit()
+    db_session.refresh(email)
+    return email
 
 
 @pytest.fixture
