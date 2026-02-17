@@ -147,6 +147,9 @@
                 <a href="/update?public_id={{ result.public_id }}" class="btn btn-secondary btn-sm">
                   ✏️ {{ _("Update") }}
                 </a>
+                <button onclick="openSendClaimModal('{{ result.public_id }}', '{{ result._db.name or result.public_id }}')" class="btn btn-primary btn-sm">
+                  📧 {{ _("Send to Insurance") }}
+                </button>
                 <form method="POST" action="/delete" style="margin: 0;">
                   <input type="hidden" name="public_id" value="{{ result.public_id }}" />
                   <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(&quot;{{ _('Are you sure?') }}&quot;)">
@@ -192,6 +195,180 @@
         </div>
       </form>
     </div>
+
+    <!-- Send Claim Modal -->
+    <div id="sendClaimModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+      <div class="card" style="max-width: 600px; width: 90%; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="card-header">
+          <h3>{{ _("Send Claim to Insurance") }}</h3>
+          <button onclick="closeSendClaimModal()" class="btn btn-ghost" style="position: absolute; right: 1rem; top: 1rem;">✕</button>
+        </div>
+
+        <form id="sendClaimForm" class="card-body grid gap-md" style="overflow-y: auto; flex: 1;">
+          <!-- Receipt Info -->
+          <div class="form-group">
+            <label>{{ _("Receipt") }}</label>
+            <input type="text" id="receiptName" readonly class="form-control" style="background: var(--color-surface); cursor: default;" />
+            <input type="hidden" id="receiptPublicId" />
+          </div>
+
+          <!-- Recipient Email -->
+          <div class="form-group">
+            <label for="recipientEmail">{{ _("Send to email") }} *</label>
+            <input type="email" id="recipientEmail" name="recipientEmail" placeholder="{{ _('insurance@company.com') }}" required />
+            <p class="text-xs text-tertiary mt-sm">{{ _("The insurance company's email address") }}</p>
+          </div>
+
+          <!-- Optional Subject -->
+          <div class="form-group">
+            <label for="emailSubject">{{ _("Subject (optional)") }}</label>
+            <input type="text" id="emailSubject" name="emailSubject" placeholder="{{ _('Claim submission') }}" />
+          </div>
+
+          <!-- Optional Message -->
+          <div class="form-group">
+            <label for="emailMessage">{{ _("Additional message (optional)") }}</label>
+            <textarea id="emailMessage" name="emailMessage" rows="4" placeholder="{{ _('Add any additional information...') }}" style="resize: vertical;"></textarea>
+          </div>
+
+          <!-- CC User Email -->
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="ccUserEmail" name="ccUserEmail" checked />
+            <label for="ccUserEmail" style="margin: 0;">{{ _("Send copy to my email") }}</label>
+          </div>
+
+          <!-- Status Message -->
+          <div id="statusMessage" style="display: none;" class="p-md" style="border-radius: var(--radius); font-size: 0.875rem;"></div>
+        </form>
+
+        <!-- Actions Footer -->
+        <div class="card-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-shrink: 0;">
+          <button type="button" onclick="closeSendClaimModal()" class="btn btn-secondary">
+            {{ _("Cancel") }}
+          </button>
+          <button type="submit" form="sendClaimForm" class="btn btn-primary" id="submitBtn">
+            📧 {{ _("Send Claim") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentPublicId = null;
+
+      function openSendClaimModal(publicId, receiptName) {
+        currentPublicId = publicId;
+        document.getElementById('receiptPublicId').value = publicId;
+        document.getElementById('receiptName').value = receiptName;
+        document.getElementById('recipientEmail').value = '';
+        document.getElementById('emailSubject').value = '';
+        document.getElementById('emailMessage').value = '';
+        document.getElementById('ccUserEmail').checked = true;
+        document.getElementById('statusMessage').style.display = 'none';
+        document.getElementById('sendClaimModal').style.display = 'flex';
+      }
+
+      function closeSendClaimModal() {
+        document.getElementById('sendClaimModal').style.display = 'none';
+        currentPublicId = null;
+      }
+
+      // Close modal when clicking outside
+      document.getElementById('sendClaimModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+          closeSendClaimModal();
+        }
+      });
+
+      document.getElementById('sendClaimForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const publicId = currentPublicId;
+        const recipientEmail = document.getElementById('recipientEmail').value;
+        const subject = document.getElementById('emailSubject').value;
+        const message = document.getElementById('emailMessage').value;
+        const ccUser = document.getElementById('ccUserEmail').checked;
+
+        // Find the claim ID from the receipt or create one
+        // For now, we'll use a simplified approach
+        const receiptName = document.getElementById('receiptName').value;
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMsg = document.getElementById('statusMessage');
+
+        submitBtn.disabled = true;
+        statusMsg.style.display = 'block';
+        statusMsg.textContent = '{{ _("Processing...") }}';
+        statusMsg.style.backgroundColor = 'var(--color-info)';
+        statusMsg.style.color = 'var(--color-info-text)';
+
+        try {
+          // Step 1: Get or create a claim for this receipt
+          const claimResponse = await fetch('/api/claims/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: {{ user_data.user_id if user_data else 0 }},
+              insurance_company: '{{ user_data.insurance_companies | default("") }}',
+              insurance_contact_email: recipientEmail,
+              claim_amount: null,
+              document_summary: receiptName
+            })
+          });
+
+          if (!claimResponse.ok) {
+            throw new Error('{{ _("Failed to create claim") }}');
+          }
+
+          const claimData = await claimResponse.json();
+          const claimId = claimData.id;
+
+          // Step 2: Send the claim email
+          let bodyHtml = `<p>{{ _("Please find attached the receipt for the following claim:") }}</p>`;
+          bodyHtml += `<p><strong>${receiptName}</strong></p>`;
+          if (message) {
+            bodyHtml += `<p>${message.replace(/\n/g, '<br>')}</p>`;
+          }
+
+          const sendResponse = await fetch(`/api/claims/${claimId}/send-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              claim_id: claimId,
+              receipt_public_id: currentPublicId,
+              subject: subject || `{{ _("Insurance Claim Submission") }} - ${receiptName}`,
+              body_html: bodyHtml,
+              body_text: `Please find attached the receipt for: ${receiptName}\n${message}`,
+              cc_user_email: ccUser
+            })
+          });
+
+          if (!sendResponse.ok) {
+            const error = await sendResponse.json();
+            throw new Error(error.detail || '{{ _("Failed to send email") }}');
+          }
+
+          statusMsg.textContent = '{{ _("Claim sent successfully!") }}';
+          statusMsg.style.backgroundColor = 'var(--color-success)';
+          statusMsg.style.color = 'var(--color-success-text)';
+
+          setTimeout(() => {
+            closeSendClaimModal();
+            // Reload page to show updated status
+            window.location.reload();
+          }, 2000);
+
+        } catch (error) {
+          statusMsg.textContent = `{{ _("Error:") }} ${error.message}`;
+          statusMsg.style.backgroundColor = 'var(--color-danger)';
+          statusMsg.style.color = 'var(--color-danger-text)';
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
 
   {% else %}
     <!-- Not logged in: Call to action -->

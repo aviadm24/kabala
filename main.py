@@ -310,6 +310,7 @@ def ui(request: Request,
         "request": request,
         "count": count,
         "username": username,
+        "user_data": user_data,
         "family_members": family_members,
         "insurance_companies": insurance_companies,
         "_": gettext_fn,
@@ -705,6 +706,7 @@ async def upload_receipt(request: Request,
             count = search_result.get('total_count') or search_result.get('total') or len(search_result.get('resources', []))
         except Exception:
             count = 0
+        user_data = get_user_db(db, username) if username else None
         return templates.TemplateResponse('index.html', {
             "request": request,
             "message": msg,
@@ -713,6 +715,7 @@ async def upload_receipt(request: Request,
             "date": date_str,
             "count": count,
             "username": username,
+            "user_data": user_data,
             "_": gettext_fn,
             "ngettext": ngettext_fn,
             "lang": _loc,
@@ -752,6 +755,7 @@ async def upload_receipt(request: Request,
     # attach db copy to result so template can show values
     result['_db'] = rec
 
+    user_data = get_user_db(db, username) if username else None
     return templates.TemplateResponse('index.html', 
                                       {"request": request, 
                                        "message": msg, 
@@ -760,6 +764,7 @@ async def upload_receipt(request: Request,
                                        "date": date_str, 
                                        "count": count, 
                                        "username": username,
+                                       "user_data": user_data,
                                        "ocr": ocr_result,
                                        "_": gettext_fn,
                                        "ngettext": ngettext_fn,
@@ -824,11 +829,13 @@ def search(request: Request,
         search_result = cloudinary.Search().expression(expr).max_results(100).execute()
         resources = search_result.get('resources', [])
     except Exception as e:
+        user_data = get_user_db(db, username) if username else None
         return templates.TemplateResponse('index.html', {
             "request": request,
             "message": gettext_fn("Search failed") + f": {e}",
             "results": [],
             "username": username,
+            "user_data": user_data,
             "_": gettext_fn,
             "ngettext": ngettext_fn,
             "lang": _loc,
@@ -846,6 +853,7 @@ def search(request: Request,
             r = _ensure_result_has_db_object(r)
         enriched.append(r)
 
+    user_data = get_user_db(db, username) if username else None
     return templates.TemplateResponse('index.html', {
         "request": request,
         "results": enriched,
@@ -855,6 +863,7 @@ def search(request: Request,
         "sent_to_insurance": sent_to_insurance,
         "insurance_company": insurance_company,
         "username": username,
+        "user_data": user_data,
         "_": gettext_fn,
         "ngettext": ngettext_fn,
         "lang": _loc,
@@ -994,12 +1003,14 @@ def update_metadata(request: Request,
         res = None
 
     msg = gettext_fn("Updated metadata for") + f" {public_id}"
+    user_data = get_user_db(db, username) if username else None
     return templates.TemplateResponse('index.html', {
         "request": request,
         "message": msg,
         "results": [res] if res else [],
         "count": 0,
         "username": username,
+        "user_data": user_data,
         "_": gettext_fn,
         "ngettext": ngettext_fn,
         "lang": _loc,
@@ -1036,11 +1047,13 @@ def delete_image(request: Request, public_id: str = Form(...),
         logger.info(f'Image deleted successfully: public_id={public_id}, user_id={user_id}, username={username}')
     except Exception as e:
         logger.error(f'Delete failed for {public_id} by user {username} (id={user_id}): {e}')
+        user_data = get_user_db(db, username) if username else None
         return templates.TemplateResponse('index.html', {
             "request": request,
             "message": gettext_fn("Delete failed") + f": {e}",
             "results": [],
             "username": username,
+            "user_data": user_data,
             "_": gettext_fn,
             "ngettext": ngettext_fn,
             "lang": _loc,
@@ -1058,11 +1071,13 @@ def delete_image(request: Request, public_id: str = Form(...),
     except Exception:
         pass
 
+    user_data = get_user_db(db, username) if username else None
     return templates.TemplateResponse('index.html', {
         "request": request,
         "message": msg,
         "results": [],
         "username": username,
+        "user_data": user_data,
         "_": gettext_fn,
         "ngettext": ngettext_fn,
         "lang": _loc,

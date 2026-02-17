@@ -15,9 +15,11 @@ from datetime import datetime
 import uuid
 import json
 import logging
-
+import requests
+import base64
+    
 from database import SessionLocal
-from models import Claim, ClaimEmail, ClaimStatus, EmailDirection, User
+from models import Claim, ClaimEmail, ClaimStatus, EmailDirection, User, Receipt
 from services.email_service import ResendClient, EmailTemplates, ResendAPIError
 from depts import get_db
 
@@ -68,6 +70,7 @@ class SendClaimEmailRequest(BaseModel):
     """Request to send a claim email"""
 
     claim_id: int
+    receipt_public_id: Optional[str] = None
     subject: Optional[str] = None
     body_html: Optional[str] = None
     body_text: Optional[str] = None
@@ -234,10 +237,39 @@ def send_claim_email(
 
     # Prepare email parameters
     cc_list = [user.email] if (request_data.cc_user_email and user.email) else None
+    
+    # Get image URL from database
+    image_url = None
+    if request_data.receipt_public_id:
+        receipt = db.query(Receipt).filter(Receipt.public_id == request_data.receipt_public_id).first()
+        if receipt:
+            image_url = receipt.secure_url
 
+    # 1. Download image if URL exists
+    encoded_file = None
+    if image_url:
+        try:
+            response = requests.get(image_url)
+            response.raise_for_status()
+            encoded_file = base64.b64encode(response.content).decode("utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to download image from {image_url}: {str(e)}")
+
+    # 2. Convert to base64
     try:
         # Send email via Resend
         client = ResendClient()
+        
+        # Build attachments if image exists
+        attachments = []
+        if encoded_file:
+            attachments = [
+                {
+                    "filename": "receipt.jpg",
+                    "content": encoded_file,
+                }
+            ]
+        
         response = client.send_email(
             to=claim.insurance_contact_email,
             subject=subject,
@@ -246,6 +278,7 @@ def send_claim_email(
             cc=cc_list,
             reply_to=claim.reply_email,
             from_email=CLAIMS_FROM_EMAIL,
+            attachments=attachments,
         )
 
         message_id = response.get("id")

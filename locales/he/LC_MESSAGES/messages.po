@@ -623,3 +623,44 @@ msgstr "יבא"
 msgid "Print"
 msgstr "הדפס"
 
+msgid "Send Claim to Insurance"
+msgstr "שלח תביעה לביטוח"
+
+msgid "Receipt"
+msgstr "קבלה"
+
+msgid "Send to email"
+msgstr "שלח לדוא\"ל"
+
+msgid "The insurance company's email address"
+msgstr "כתובת הדוא\"ל של חברת הביטוח"
+
+msgid "Subject (optional)"
+msgstr "נושא (אופציונלי)"
+
+msgid "Additional message (optional)"
+msgstr "הודעה נוספת (אופציונלי)"
+
+msgid "Add any additional information..."
+msgstr "הוסף כל מידע נוסף..."
+
+msgid "Send copy to my email"
+msgstr "שלח עותק לדוא\"ל שלי"
+
+msgid "Failed to create claim"
+msgstr "נכשל בייצור תביעה"
+
+msgid "Please find attached the receipt for the following claim:"
+msgstr "אנא מצא בצירוף קבלה לתביעה הבאה:"
+
+msgid "Error:"
+msgstr "שגיאה:"
+
+msgid "Failed to send email"
+msgstr "נכשל בשליחת דוא\"ל"
+
+msgid "Claim sent successfully!"
+msgstr "התביעה נשלחה בהצלחה!"
+
+msgid "Insurance Claim Submission"
+msgstr "הגשת תביעה לביטוח"

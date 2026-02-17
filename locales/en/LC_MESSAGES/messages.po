@@ -179,3 +179,56 @@ msgstr "Notes"
 
 msgid "Any additional notes..."
 msgstr "Any additional notes..."
+msgid "Send to Insurance"
+msgstr "Send to Insurance"
+
+msgid "Send Claim to Insurance"
+msgstr "Send Claim to Insurance"
+
+msgid "Receipt"
+msgstr "Receipt"
+
+msgid "Send to email"
+msgstr "Send to email"
+
+msgid "The insurance company's email address"
+msgstr "The insurance company's email address"
+
+msgid "Subject (optional)"
+msgstr "Subject (optional)"
+
+msgid "Additional message (optional)"
+msgstr "Additional message (optional)"
+
+msgid "Add any additional information..."
+msgstr "Add any additional information..."
+
+msgid "Send copy to my email"
+msgstr "Send copy to my email"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Send Claim"
+msgstr "Send Claim"
+
+msgid "Processing..."
+msgstr "Processing..."
+
+msgid "Failed to create claim"
+msgstr "Failed to create claim"
+
+msgid "Please find attached the receipt for the following claim:"
+msgstr "Please find attached the receipt for the following claim:"
+
+msgid "Error:"
+msgstr "Error:"
+
+msgid "Failed to send email"
+msgstr "Failed to send email"
+
+msgid "Claim sent successfully!"
+msgstr "Claim sent successfully!"
+
+msgid "Insurance Claim Submission"
+msgstr "Insurance Claim Submission"
